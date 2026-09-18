@@ -284,20 +284,6 @@ Open **`http://127.0.0.1:8000`** in your browser to access the complete applicat
 
 ---
 
-## 🌐 Deploying to Vercel
-
-TruthLens is pre-configured for one-click deployment on **Vercel**:
-
-1. Push your repository to GitHub:
-   ```bash
-   git push origin main
-   ```
-2. In the [Vercel Dashboard](https://vercel.com/new), select your `Truth-Lens` repository.
-3. Vercel detects `vercel.json` and `api/index.py` automatically.
-4. Click **Deploy**.
-
----
-
 ## 👥 Contributors & Institutional Affiliation
 
 - **Project Lead**: Prashant Jha
