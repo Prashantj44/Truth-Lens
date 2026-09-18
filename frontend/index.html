@@ -22,12 +22,14 @@
             mono: ['"JetBrains Mono"', 'monospace'],
           },
           colors: {
-            brand: {
+            mono: {
               black: '#000000',
               deep: '#070709',
               card: '#0c0c0e',
-              border: '#1f1f23',
-              borderHover: '#333338',
+              cardHover: '#141417',
+              border: '#202024',
+              borderHover: '#38383e',
+              borderWhite: '#ffffff',
               muted: '#71717a',
               subtext: '#a1a1aa',
               light: '#f4f4f5',
@@ -51,38 +53,29 @@
     body {
       background-color: #000000;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 60%),
-        radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-      background-size: 100% 100%, 28px 28px;
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 65%),
+        radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+      background-size: 100% 100%, 24px 24px;
       background-attachment: fixed;
     }
     .mono-card {
-      background: rgba(12, 12, 14, 0.85);
+      background: rgba(12, 12, 14, 0.9);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .mono-card:hover {
-      border-color: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.25);
     }
-    .hero-gradient-text {
-      background: linear-gradient(180deg, #FFFFFF 0%, #D4D4D8 60%, #71717A 100%);
+    .hero-title {
+      background: linear-gradient(180deg, #FFFFFF 0%, #E4E4E7 50%, #71717A 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .subtle-shimmer {
-      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
-      background-size: 200% 100%;
-      animation: shimmer 3s infinite;
-    }
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: #000000; }
     ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    ::-webkit-scrollbar-thumb:hover { background: #52525b; }
   </style>
 </head>
 <body class="text-zinc-100 min-h-screen antialiased selection:bg-white selection:text-black">
@@ -91,7 +84,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- Minimalist Professional SVG Icons ---
+    // --- Strict Minimalist Black & White Icons ---
     const Icon = ({ name, className = "w-4 h-4" }) => {
       switch (name) {
         case 'shield':
@@ -129,45 +122,41 @@
       }
     };
 
-    // --- Modern Refined Verdict Badge ---
+    // --- Pure Black & White Verdict Badge ---
     function VerdictBadge({ verdict, size = 'md' }) {
       const v = (verdict || 'INSUFFICIENT EVIDENCE').toUpperCase();
       const configs = {
         'SUPPORTED': {
-          border: 'border-emerald-500/30',
-          bg: 'bg-emerald-950/20',
-          text: 'text-emerald-300',
-          glow: 'bg-emerald-500',
+          border: 'border-white',
+          bg: 'bg-white text-black',
+          badgeClass: 'bg-white text-black border-white',
           iconName: 'check',
           label: 'SUPPORTED',
-          desc: 'Corroborated by verified evidence in the knowledge base.'
+          desc: 'Corroborated by verified evidence in the knowledge vault.'
         },
         'REFUTED': {
-          border: 'border-rose-500/30',
-          bg: 'bg-rose-950/20',
-          text: 'text-rose-300',
-          glow: 'bg-rose-500',
+          border: 'border-zinc-500',
+          bg: 'bg-black text-white border border-zinc-500',
+          badgeClass: 'bg-black text-white border-zinc-400',
           iconName: 'x',
           label: 'REFUTED',
-          desc: 'Contradicted by factual data in authoritative records.'
+          desc: 'Directly contradicted by factual data in authoritative records.'
         },
         'MISLEADING': {
-          border: 'border-amber-500/30',
-          bg: 'bg-amber-950/20',
-          text: 'text-amber-300',
-          glow: 'bg-amber-500',
+          border: 'border-zinc-400',
+          bg: 'bg-zinc-900 text-zinc-100 border border-zinc-600',
+          badgeClass: 'bg-zinc-900 text-zinc-200 border-zinc-600',
           iconName: 'alert',
           label: 'MISLEADING',
-          desc: 'Partially true or factual, but missing essential context or caveats.'
+          desc: 'Partially accurate, but omits critical context or caveats.'
         },
         'INSUFFICIENT EVIDENCE': {
           border: 'border-zinc-700',
-          bg: 'bg-zinc-900/60',
-          text: 'text-zinc-300',
-          glow: 'bg-zinc-400',
+          bg: 'bg-black text-zinc-400 border border-dashed border-zinc-700',
+          badgeClass: 'bg-zinc-950 text-zinc-400 border-zinc-800 border-dashed',
           iconName: 'help',
           label: 'INSUFFICIENT EVIDENCE',
-          desc: 'Knowledge base lacks decisive reports to confirm or disprove.'
+          desc: 'Knowledge vault lacks decisive reports to confirm or disprove.'
         }
       };
 
@@ -175,30 +164,29 @@
 
       if (size === 'lg') {
         return (
-          <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl border ${cfg.border} ${cfg.bg} transition-all`}>
-            <div className="w-11 h-11 rounded-xl bg-black border border-zinc-800 flex items-center justify-center shrink-0">
-              <span className={`w-2.5 h-2.5 rounded-full ${cfg.glow} shadow-sm mr-1`}></span>
-              <Icon name={cfg.iconName} className={`w-5 h-5 ${cfg.text}`} />
+          <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl ${cfg.bg} transition-all`}>
+            <div className="w-11 h-11 rounded-xl bg-zinc-950 border border-zinc-700 flex items-center justify-center shrink-0">
+              <Icon name={cfg.iconName} className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className={`text-xl sm:text-2xl font-black tracking-wider uppercase font-mono ${cfg.text}`}>
+              <div className="text-xl sm:text-2xl font-black tracking-wider uppercase font-mono">
                 {cfg.label}
               </div>
-              <div className="text-xs text-zinc-400 font-medium mt-0.5">{cfg.desc}</div>
+              <div className="text-xs opacity-80 font-medium mt-0.5">{cfg.desc}</div>
             </div>
           </div>
         );
       }
 
       return (
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold tracking-wider font-mono ${cfg.border} ${cfg.bg} ${cfg.text}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${cfg.glow}`}></span>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold tracking-wider font-mono ${cfg.badgeClass}`}>
+          <Icon name={cfg.iconName} className="w-3.5 h-3.5" />
           {cfg.label}
         </span>
       );
     }
 
-    // --- Sleek Evidence Chunk Card ---
+    // --- Pure Monochrome Evidence Chunk Card ---
     function EvidenceChunkCard({ chunk }) {
       const [expanded, setExpanded] = useState(false);
       const stance = chunk.stance || 'NEUTRAL';
@@ -207,31 +195,31 @@
 
       const styles = {
         'SUPPORTING': {
-          border: 'border-zinc-800 hover:border-emerald-500/40',
-          tag: 'bg-emerald-950/30 text-emerald-300 border-emerald-500/30',
+          border: 'border-white/30 hover:border-white',
+          tag: 'bg-white text-black font-bold',
           icon: 'check',
-          label: 'Supporting Evidence'
+          label: 'SUPPORTING'
         },
         'CONTRADICTING': {
-          border: 'border-zinc-800 hover:border-rose-500/40',
-          tag: 'bg-rose-950/30 text-rose-300 border-rose-500/30',
+          border: 'border-zinc-700 hover:border-zinc-400',
+          tag: 'bg-black text-white border border-zinc-600',
           icon: 'x',
-          label: 'Contradicting Evidence'
+          label: 'CONTRADICTING'
         },
         'NEUTRAL': {
           border: 'border-zinc-850 hover:border-zinc-700',
-          tag: 'bg-zinc-900 text-zinc-400 border-zinc-800',
+          tag: 'bg-zinc-900 text-zinc-400 border border-zinc-800',
           icon: 'help',
-          label: 'Contextual Reference'
+          label: 'CONTEXTUAL'
         }
       };
 
       const s = styles[stance] || styles['NEUTRAL'];
 
       return (
-        <div className={`p-4 rounded-xl bg-brand-card/90 border ${s.border} transition-all duration-200`}>
-          <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-zinc-800/80">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-medium font-mono ${s.tag}`}>
+        <div className={`p-4 rounded-xl bg-mono-card border ${s.border} transition-all duration-200`}>
+          <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-zinc-850">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono tracking-wider ${s.tag}`}>
               <Icon name={s.icon} className="w-3 h-3" />
               {s.label}
             </span>
@@ -257,11 +245,11 @@
             </button>
           )}
 
-          <div className="mt-3 pt-2.5 border-t border-zinc-900 flex items-center justify-between text-[11px] text-zinc-500">
-            <span className="truncate max-w-[75%] font-mono text-zinc-400">
+          <div className="mt-3 pt-2.5 border-t border-zinc-900 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
+            <span className="truncate max-w-[75%] text-zinc-400">
               Source: <strong className="text-zinc-200">{chunk.source}</strong> {chunk.page_number && `(p. ${chunk.page_number})`}
             </span>
-            <span className="font-mono text-zinc-600 uppercase">ID: {chunk.chunk_id?.slice(-6)}</span>
+            <span className="text-zinc-600 uppercase">ID: {chunk.chunk_id?.slice(-6)}</span>
           </div>
         </div>
       );
@@ -416,7 +404,7 @@
         formData.append('file', file);
         formData.append('source_name', file.name.replace(/\.[^/.]+$/, ''));
 
-        showToast(`Chunking and embedding ${file.name}...`, 'info');
+        showToast(`Indexing ${file.name}...`, 'info');
         try {
           const res = await fetch('/api/upload', {
             method: 'POST',
@@ -497,18 +485,14 @@
         <div className="flex flex-col min-h-screen">
           {/* Toast Notification */}
           {toast && (
-            <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl border shadow-2xl flex items-center gap-3 backdrop-blur-2xl text-xs font-mono tracking-wide ${
-              toast.type === 'error' ? 'bg-zinc-950 border-rose-500/50 text-rose-300' :
-              toast.type === 'success' ? 'bg-zinc-950 border-white/40 text-white' :
-              'bg-zinc-950 border-zinc-800 text-zinc-300'
-            }`}>
-              <Icon name={toast.type === 'error' ? 'x' : toast.type === 'success' ? 'check' : 'shield'} className="w-4 h-4" />
+            <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl border border-white/30 bg-black text-white shadow-2xl flex items-center gap-3 backdrop-blur-2xl text-xs font-mono tracking-wide">
+              <Icon name={toast.type === 'error' ? 'x' : 'check'} className="w-4 h-4 text-white" />
               <span>{toast.msg}</span>
             </div>
           )}
 
           {/* Top Navigation Bar */}
-          <header className="sticky top-0 z-40 w-full border-b border-zinc-850 bg-black/85 backdrop-blur-2xl">
+          <header className="sticky top-0 z-40 w-full border-b border-zinc-850 bg-black/90 backdrop-blur-2xl">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
               
               {/* Brand Logo */}
@@ -516,7 +500,7 @@
                 onClick={() => setActiveTab('verify')}
                 className="flex items-center gap-3 cursor-pointer group"
               >
-                <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center group-hover:border-white transition-all shadow-sm">
+                <div className="w-9 h-9 rounded-xl bg-zinc-950 border border-zinc-700 flex items-center justify-center group-hover:border-white transition-all shadow-sm">
                   <Icon name="shield" className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -524,7 +508,7 @@
                     <span className="font-extrabold text-base tracking-tight text-white font-mono">
                       TruthLens
                     </span>
-                    <span className="text-[10px] uppercase font-mono font-bold tracking-widest px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800">
+                    <span className="text-[10px] uppercase font-mono font-bold tracking-widest px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
                       RAG Engine
                     </span>
                   </div>
@@ -576,13 +560,13 @@
                 <div className="text-center max-w-3xl mx-auto pt-2 pb-2">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-400 text-xs font-mono font-medium tracking-widest uppercase mb-4">
                     <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                    Explainable Fact Verification Engine
+                    Explainable Retrieval-Augmented Generation
                   </div>
-                  <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-4 hero-gradient-text font-sans">
+                  <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-4 hero-title font-sans">
                     Verify claims with verifiable evidence.
                   </h1>
-                  <p className="text-zinc-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
-                    Retrieval-Augmented Generation cross-examines factual statements against indexed trusted knowledge bases to determine explainable verdicts.
+                  <p className="text-zinc-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto font-sans">
+                    Cross-examines factual claims against indexed authoritative documentation to generate explainable, evidence-backed verdicts.
                   </p>
                 </div>
 
@@ -617,7 +601,7 @@
                         <button
                           onClick={() => handleVerify()}
                           disabled={verifying}
-                          className="px-6 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50"
+                          className="px-6 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 font-mono"
                         >
                           {verifying ? (
                             <>
@@ -973,7 +957,7 @@
                               <td className="py-3 px-3 text-right">
                                 <button
                                   onClick={() => handleDeleteDoc(doc.id, doc.filename)}
-                                  className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 transition-colors"
+                                  className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-900 transition-colors"
                                   title="Delete Document & Chunks"
                                 >
                                   <Icon name="trash" className="w-4 h-4" />
