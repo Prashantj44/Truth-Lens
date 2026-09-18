@@ -1,0 +1,22 @@
+# WORLD HEALTH ORGANIZATION (WHO) & CDC CLINICAL CONSENSUS GUIDELINES
+Source: World Health Organization (WHO) Guidelines for Antimicrobial Stewardship & CDC National Center for Emerging Infections
+Publication Category: Government / Official Public Health Guidelines
+Report Reference: WHO-AMR-2024-CORE / CDC-ID-882
+
+SECTION 1: MECHANISM OF ANTIMICROBIAL AGENTS (ANTIBIOTICS)
+Antibiotics (also termed antibacterial agents) are medicines that fight bacterial infections in humans and animals. They work by killing bacteria directly (bactericidal) or by inhibiting bacterial cellular growth and reproduction (bacteriostatic), targeting specific bacterial structures such as peptidoglycan cell walls or bacterial 70S ribosomes.
+
+SECTION 2: VIRAL INFECTIONS AND INEFFECTIVENESS OF ANTIBIOTICS
+Antibiotics have ZERO biological activity against viruses. Viruses possess fundamentally different structures and replication mechanisms compared to bacteria, relying entirely on human host cell machinery.
+
+Consequently, antibiotics CANNOT treat, cure, or shorten the duration of viral infections, including:
+- The common cold (caused primarily by rhinoviruses)
+- Seasonal influenza (flu)
+- COVID-19 (caused by SARS-CoV-2)
+- Acute bronchitis (over 90% viral in origin)
+- Most sore throats (except confirmed streptococcal pharyngitis)
+
+Prescribing or consuming antibiotics for viral ailments is medically contraindicated, provides no symptomatic benefit, and accelerates antimicrobial resistance (AMR), which currently causes over 1.2 million direct deaths globally each year.
+
+SECTION 3: VACCINE MECHANISMS AND IMMUNITY
+Vaccines prepare the human adaptive immune system to recognize and neutralize targeted pathogens by exposing antigen-presenting cells to inactivated pathogens, attenuated strains, or recombinant proteins without causing severe disease. Decades of peer-reviewed clinical data confirm vaccines have eradicated smallpox and reduced global polio incidence by over 99%.
