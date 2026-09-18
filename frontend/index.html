@@ -24,12 +24,9 @@
           colors: {
             mono: {
               black: '#000000',
-              deep: '#070709',
+              deep: '#060608',
               card: '#0c0c0e',
-              cardHover: '#141417',
-              border: '#202024',
-              borderHover: '#38383e',
-              borderWhite: '#ffffff',
+              border: '#1f1f23',
               muted: '#71717a',
               subtext: '#a1a1aa',
               light: '#f4f4f5',
@@ -53,26 +50,26 @@
     body {
       background-color: #000000;
       background-image: 
-        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 65%),
-        radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
-      background-size: 100% 100%, 24px 24px;
+        radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06) 0%, transparent 60%),
+        radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+      background-size: 100% 100%, 28px 28px;
       background-attachment: fixed;
     }
     .mono-card {
-      background: rgba(12, 12, 14, 0.9);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(12, 12, 14, 0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .mono-card:hover {
-      border-color: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.22);
     }
     .hero-title {
-      background: linear-gradient(180deg, #FFFFFF 0%, #E4E4E7 50%, #71717A 100%);
+      background: linear-gradient(180deg, #FFFFFF 0%, #E4E4E7 60%, #71717A 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #000000; }
     ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 9999px; }
     ::-webkit-scrollbar-thumb:hover { background: #52525b; }
@@ -127,36 +124,32 @@
       const v = (verdict || 'INSUFFICIENT EVIDENCE').toUpperCase();
       const configs = {
         'SUPPORTED': {
-          border: 'border-white',
-          bg: 'bg-white text-black',
+          bg: 'bg-white text-black font-bold shadow-[0_0_25px_rgba(255,255,255,0.25)]',
           badgeClass: 'bg-white text-black border-white',
           iconName: 'check',
           label: 'SUPPORTED',
-          desc: 'Corroborated by verified evidence in the knowledge vault.'
+          desc: 'Corroborated by verified factual documentation in the knowledge vault.'
         },
         'REFUTED': {
-          border: 'border-zinc-500',
-          bg: 'bg-black text-white border border-zinc-500',
+          bg: 'bg-black text-white border-2 border-zinc-500 shadow-xl',
           badgeClass: 'bg-black text-white border-zinc-400',
           iconName: 'x',
           label: 'REFUTED',
           desc: 'Directly contradicted by factual data in authoritative records.'
         },
         'MISLEADING': {
-          border: 'border-zinc-400',
-          bg: 'bg-zinc-900 text-zinc-100 border border-zinc-600',
+          bg: 'bg-zinc-900 text-zinc-100 border border-zinc-600 shadow-xl',
           badgeClass: 'bg-zinc-900 text-zinc-200 border-zinc-600',
           iconName: 'alert',
           label: 'MISLEADING',
-          desc: 'Partially accurate, but omits critical context or caveats.'
+          desc: 'Partially accurate, but omits essential context, caveats, or nuance.'
         },
         'INSUFFICIENT EVIDENCE': {
-          border: 'border-zinc-700',
-          bg: 'bg-black text-zinc-400 border border-dashed border-zinc-700',
+          bg: 'bg-zinc-950 text-zinc-400 border border-dashed border-zinc-700 shadow-lg',
           badgeClass: 'bg-zinc-950 text-zinc-400 border-zinc-800 border-dashed',
           iconName: 'help',
           label: 'INSUFFICIENT EVIDENCE',
-          desc: 'Knowledge vault lacks decisive reports to confirm or disprove.'
+          desc: 'Knowledge vault lacks decisive records to corroborate or disprove.'
         }
       };
 
@@ -164,15 +157,15 @@
 
       if (size === 'lg') {
         return (
-          <div className={`flex items-center gap-4 px-6 py-4 rounded-2xl ${cfg.bg} transition-all`}>
-            <div className="w-11 h-11 rounded-xl bg-zinc-950 border border-zinc-700 flex items-center justify-center shrink-0">
-              <Icon name={cfg.iconName} className="w-5 h-5 text-white" />
+          <div className={`flex items-center gap-5 px-6 py-5 rounded-2xl ${cfg.bg} transition-all`}>
+            <div className="w-12 h-12 rounded-xl bg-zinc-950 border border-zinc-700 flex items-center justify-center shrink-0">
+              <Icon name={cfg.iconName} className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="text-xl sm:text-2xl font-black tracking-wider uppercase font-mono">
+              <div className="text-2xl sm:text-3xl font-black tracking-wider uppercase font-mono">
                 {cfg.label}
               </div>
-              <div className="text-xs opacity-80 font-medium mt-0.5">{cfg.desc}</div>
+              <div className="text-xs opacity-80 font-medium mt-1">{cfg.desc}</div>
             </div>
           </div>
         );
@@ -191,18 +184,18 @@
       const [expanded, setExpanded] = useState(false);
       const stance = chunk.stance || 'NEUTRAL';
       const text = chunk.text || '';
-      const isLong = text.length > 240;
+      const isLong = text.length > 260;
 
       const styles = {
         'SUPPORTING': {
-          border: 'border-white/30 hover:border-white',
+          border: 'border-white/40 hover:border-white',
           tag: 'bg-white text-black font-bold',
           icon: 'check',
           label: 'SUPPORTING'
         },
         'CONTRADICTING': {
           border: 'border-zinc-700 hover:border-zinc-400',
-          tag: 'bg-black text-white border border-zinc-600',
+          tag: 'bg-black text-white border border-zinc-600 font-bold',
           icon: 'x',
           label: 'CONTRADICTING'
         },
@@ -217,23 +210,23 @@
       const s = styles[stance] || styles['NEUTRAL'];
 
       return (
-        <div className={`p-4 rounded-xl bg-mono-card border ${s.border} transition-all duration-200`}>
+        <div className={`p-5 rounded-2xl bg-mono-card border ${s.border} transition-all duration-200`}>
           <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-zinc-850">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-mono tracking-wider ${s.tag}`}>
-              <Icon name={s.icon} className="w-3 h-3" />
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-mono tracking-wider ${s.tag}`}>
+              <Icon name={s.icon} className="w-3.5 h-3.5" />
               {s.label}
             </span>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="font-mono text-white font-bold">{chunk.relevance_score}% Relevance</span>
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="text-white font-bold">{chunk.relevance_score}% Relevance</span>
               <span className="text-zinc-700">|</span>
-              <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 text-[11px] font-mono">
+              <span className="px-2.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 text-[11px]">
                 {chunk.source_type}
               </span>
             </div>
           </div>
 
-          <p className="text-sm text-zinc-300 leading-relaxed font-normal">
-            {expanded || !isLong ? text : `${text.slice(0, 240)}...`}
+          <p className="text-sm sm:text-base text-zinc-300 leading-relaxed font-normal">
+            {expanded || !isLong ? text : `${text.slice(0, 260)}...`}
           </p>
 
           {isLong && (
@@ -245,8 +238,8 @@
             </button>
           )}
 
-          <div className="mt-3 pt-2.5 border-t border-zinc-900 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
-            <span className="truncate max-w-[75%] text-zinc-400">
+          <div className="mt-4 pt-3 border-t border-zinc-900 flex items-center justify-between text-xs text-zinc-500 font-mono">
+            <span className="truncate max-w-[80%] text-zinc-400">
               Source: <strong className="text-zinc-200">{chunk.source}</strong> {chunk.page_number && `(p. ${chunk.page_number})`}
             </span>
             <span className="text-zinc-600 uppercase">ID: {chunk.chunk_id?.slice(-6)}</span>
@@ -341,9 +334,9 @@
         setCurrentResult(null);
         setProgressStep(1);
 
-        const stepTimer1 = setTimeout(() => setProgressStep(2), 400);
-        const stepTimer2 = setTimeout(() => setProgressStep(3), 900);
-        const stepTimer3 = setTimeout(() => setProgressStep(4), 1400);
+        const stepTimer1 = setTimeout(() => setProgressStep(2), 350);
+        const stepTimer2 = setTimeout(() => setProgressStep(3), 850);
+        const stepTimer3 = setTimeout(() => setProgressStep(4), 1350);
 
         try {
           const res = await fetch('/api/verify', {
@@ -389,7 +382,7 @@
           loadDocuments();
           loadAnalytics();
         } catch (err) {
-          showToast('Failed to seed knowledge base: ' + err.message, 'error');
+          showToast('Failed to seed knowledge vault: ' + err.message, 'error');
         } finally {
           setSeeding(false);
         }
@@ -463,7 +456,7 @@
               plugins: {
                 legend: {
                   position: 'bottom',
-                  labels: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 11 }, boxWidth: 12 }
+                  labels: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 12 }, boxWidth: 14 }
                 }
               },
               cutout: '72%'
@@ -474,6 +467,7 @@
 
       // Example clickable suggestion claims
       const exampleClaims = [
+        "Narendra Modi is the Prime Minister of India.",
         "India became the world's third-largest economy in 2025.",
         "Renewable energy accounts for over 30 percent of global electricity.",
         "Antibiotics can cure viral infections like the flu.",
@@ -485,7 +479,7 @@
         <div className="flex flex-col min-h-screen">
           {/* Toast Notification */}
           {toast && (
-            <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl border border-white/30 bg-black text-white shadow-2xl flex items-center gap-3 backdrop-blur-2xl text-xs font-mono tracking-wide">
+            <div className="fixed bottom-8 right-8 z-50 px-5 py-3.5 rounded-2xl border border-white/30 bg-black text-white shadow-2xl flex items-center gap-3 backdrop-blur-2xl text-xs sm:text-sm font-mono tracking-wide">
               <Icon name={toast.type === 'error' ? 'x' : 'check'} className="w-4 h-4 text-white" />
               <span>{toast.msg}</span>
             </div>
@@ -493,22 +487,22 @@
 
           {/* Top Navigation Bar */}
           <header className="sticky top-0 z-40 w-full border-b border-zinc-850 bg-black/90 backdrop-blur-2xl">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
               
               {/* Brand Logo */}
               <div 
                 onClick={() => setActiveTab('verify')}
-                className="flex items-center gap-3 cursor-pointer group"
+                className="flex items-center gap-3.5 cursor-pointer group"
               >
-                <div className="w-9 h-9 rounded-xl bg-zinc-950 border border-zinc-700 flex items-center justify-center group-hover:border-white transition-all shadow-sm">
+                <div className="w-10 h-10 rounded-xl bg-zinc-950 border border-zinc-700 flex items-center justify-center group-hover:border-white transition-all shadow-sm">
                   <Icon name="shield" className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-base tracking-tight text-white font-mono">
+                    <span className="font-extrabold text-lg tracking-tight text-white font-mono">
                       TruthLens
                     </span>
-                    <span className="text-[10px] uppercase font-mono font-bold tracking-widest px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
+                    <span className="text-[10px] uppercase font-mono font-bold tracking-widest px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800">
                       RAG Engine
                     </span>
                   </div>
@@ -516,7 +510,7 @@
               </div>
 
               {/* Navigation Tabs */}
-              <nav className="flex items-center gap-1 sm:gap-2">
+              <nav className="flex items-center gap-1.5 sm:gap-2">
                 {[
                   { id: 'verify', label: 'Verify Claim', icon: 'shield' },
                   { id: 'knowledge', label: 'Knowledge Vault', icon: 'database' },
@@ -527,55 +521,55 @@
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold tracking-wide transition-all ${
                       activeTab === t.id
-                        ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]'
+                        ? 'bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)] font-bold'
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent'
                     }`}
                   >
-                    <Icon name={t.icon} className="w-3.5 h-3.5" />
+                    <Icon name={t.icon} className="w-4 h-4" />
                     <span className="hidden md:inline">{t.label}</span>
                   </button>
                 ))}
               </nav>
 
               {/* Status Indicator */}
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-400">
+              <div className="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-full bg-zinc-950 border border-zinc-800 text-xs font-mono text-zinc-400">
                 <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
                 <span>Vault: <strong className="text-white">{health?.indexed_chunks ?? 0}</strong> chunks</span>
               </div>
             </div>
           </header>
 
-          {/* Main Workspace */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          {/* Main Expansive Workspace */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
             
             {/* ======================================================== */}
             {/* TAB 1: VERIFY CLAIM (MAIN WORKSPACE)                     */}
             {/* ======================================================== */}
             {activeTab === 'verify' && (
-              <div className="space-y-10">
+              <div className="space-y-12">
                 
                 {/* Hero Header */}
-                <div className="text-center max-w-3xl mx-auto pt-2 pb-2">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-400 text-xs font-mono font-medium tracking-widest uppercase mb-4">
+                <div className="text-center max-w-4xl mx-auto pt-4 pb-2">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs font-mono font-medium tracking-widest uppercase mb-5">
                     <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                     Explainable Retrieval-Augmented Generation
                   </div>
-                  <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-4 hero-title font-sans">
+                  <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tight text-white mb-5 hero-title font-sans">
                     Verify claims with verifiable evidence.
                   </h1>
-                  <p className="text-zinc-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto font-sans">
+                  <p className="text-zinc-400 text-base sm:text-lg leading-relaxed max-w-3xl mx-auto font-sans">
                     Cross-examines factual claims against indexed authoritative documentation to generate explainable, evidence-backed verdicts.
                   </p>
                 </div>
 
-                {/* Claim Input Box */}
-                <div className="max-w-3xl mx-auto">
-                  <div className="mono-card rounded-2xl p-5 sm:p-6 shadow-2xl relative border-zinc-800 focus-within:border-white transition-all">
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center justify-between text-xs text-zinc-400 font-mono">
-                        <span className="uppercase tracking-widest font-semibold">Claim or Statement</span>
+                {/* Claim Input Box (Expansive width) */}
+                <div className="max-w-4xl mx-auto">
+                  <div className="mono-card rounded-2xl p-6 sm:p-8 shadow-2xl relative border-zinc-800 focus-within:border-white transition-all">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-400 font-mono">
+                        <span className="uppercase tracking-widest font-semibold">Enter Claim or Statement</span>
                         <span className="text-zinc-500">Press Ctrl + Enter to verify</span>
                       </div>
                       <textarea
@@ -588,25 +582,25 @@
                             handleVerify();
                           }
                         }}
-                        placeholder="Enter any claim, news headline, or statistical assertion to cross-verify..."
-                        className="w-full bg-black rounded-xl px-4 py-3.5 text-zinc-100 placeholder-zinc-600 border border-zinc-800 focus:outline-none focus:border-white text-base resize-none font-sans"
+                        placeholder="e.g. Narendra Modi is the Prime Minister of India..."
+                        className="w-full bg-black rounded-xl px-5 py-4 text-zinc-100 placeholder-zinc-600 border border-zinc-800 focus:outline-none focus:border-white text-lg resize-none font-sans"
                       />
                       
-                      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                        <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
+                      <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm font-mono text-zinc-400">
                           <span className="w-2 h-2 rounded-full bg-white"></span>
-                          <span>Inference: <strong className="text-zinc-200">{selectedProvider.toUpperCase()}</strong></span>
+                          <span>Inference Engine: <strong className="text-zinc-200">{selectedProvider.toUpperCase()}</strong></span>
                         </div>
 
                         <button
                           onClick={() => handleVerify()}
                           disabled={verifying}
-                          className="px-6 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-sm shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 font-mono"
+                          className="px-8 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-sm sm:text-base shadow-[0_0_25px_rgba(255,255,255,0.18)] active:scale-[0.98] transition-all flex items-center gap-2.5 disabled:opacity-50 font-mono"
                         >
                           {verifying ? (
                             <>
-                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-black" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-                              <span>Verifying...</span>
+                              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-black" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                              <span>Verifying Evidence...</span>
                             </>
                           ) : (
                             <>
@@ -620,7 +614,7 @@
                   </div>
 
                   {/* Suggestion Chips */}
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                  <div className="mt-5 flex flex-wrap items-center gap-2.5 text-xs sm:text-sm">
                     <span className="text-zinc-500 font-mono font-medium">Quick tests:</span>
                     {exampleClaims.map((claim, idx) => (
                       <button
@@ -629,9 +623,9 @@
                           setClaimInput(claim);
                           handleVerify(claim);
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-850 hover:border-zinc-700 transition-colors text-left font-mono"
+                        className="px-3.5 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-850 hover:border-zinc-700 transition-colors text-left font-mono"
                       >
-                        "{claim.length > 42 ? claim.slice(0, 42) + '...' : claim}"
+                        "{claim.length > 45 ? claim.slice(0, 45) + '...' : claim}"
                       </button>
                     ))}
                   </div>
@@ -639,8 +633,8 @@
 
                 {/* Live Progress Pipeline */}
                 {verifying && (
-                  <div className="max-w-3xl mx-auto mono-card rounded-2xl p-6 border-zinc-700 animate-pulse">
-                    <h3 className="text-xs font-mono font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <div className="max-w-4xl mx-auto mono-card rounded-2xl p-6 sm:p-8 border-zinc-700 animate-pulse">
+                    <h3 className="text-xs sm:text-sm font-mono font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-white"></span>
                       Executing RAG Fact-Verification Pipeline
                     </h3>
@@ -651,12 +645,12 @@
                         { step: 3, label: 'Hybrid Reranker' },
                         { step: 4, label: 'NLI Synthesis' }
                       ].map((s) => (
-                        <div key={s.step} className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                        <div key={s.step} className={`p-4 rounded-xl border text-xs sm:text-sm flex items-center gap-3 ${
                           progressStep >= s.step 
                             ? 'bg-zinc-900 border-white text-white' 
                             : 'bg-black border-zinc-850 text-zinc-600'
                         }`}>
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
                             progressStep >= s.step ? 'bg-white text-black' : 'bg-zinc-850 text-zinc-500'
                           }`}>
                             {s.step}
@@ -668,20 +662,20 @@
                   </div>
                 )}
 
-                {/* RESULTS PRESENTATION */}
+                {/* RESULTS PRESENTATION (Full expansive 6xl width) */}
                 {currentResult && !verifying && (
-                  <div className="max-w-4xl mx-auto space-y-6 pt-2">
+                  <div className="max-w-6xl mx-auto space-y-8 pt-2">
                     
                     {/* Similar Claim Notification */}
                     {currentResult.similar_claim_found && (
-                      <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex items-start justify-between gap-4 font-mono">
-                        <div className="flex items-start gap-3">
+                      <div className="p-5 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-start justify-between gap-4 font-mono">
+                        <div className="flex items-start gap-3.5">
                           <Icon name="history" className="w-5 h-5 text-white mt-0.5" />
                           <div>
                             <span className="text-xs uppercase font-bold tracking-widest text-zinc-300">
                               Claim Similarity Match ({currentResult.similar_claim_found.similarity_score}% overlap)
                             </span>
-                            <p className="text-sm text-zinc-400 mt-0.5 font-sans">
+                            <p className="text-sm sm:text-base text-zinc-400 mt-1 font-sans">
                               Previously verified: <strong className="text-white">"{currentResult.similar_claim_found.claim}"</strong> with verdict <strong className="text-white">{currentResult.similar_claim_found.verdict}</strong>.
                             </p>
                           </div>
@@ -691,13 +685,13 @@
                     )}
 
                     {/* Verdict Hero Card */}
-                    <div className="mono-card rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-                      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-zinc-850">
-                        <div className="space-y-2 flex-1">
+                    <div className="mono-card rounded-2xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+                      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-8 border-b border-zinc-850">
+                        <div className="space-y-2.5 flex-1">
                           <span className="text-xs uppercase font-mono font-bold tracking-widest text-zinc-500">
                             Verified Assertion
                           </span>
-                          <h2 className="text-xl sm:text-2xl font-bold text-white leading-snug">
+                          <h2 className="text-2xl sm:text-3xl font-bold text-white leading-snug">
                             "{currentResult.claim}"
                           </h2>
                         </div>
@@ -707,36 +701,36 @@
                       </div>
 
                       {/* Score Metrics Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                        <div className="p-4 rounded-xl bg-black border border-zinc-850">
-                          <div className="text-xs text-zinc-400 font-mono uppercase tracking-wider">Confidence Score</div>
-                          <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-3xl font-black text-white font-mono">{currentResult.confidence_score}%</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-8">
+                        <div className="p-5 sm:p-6 rounded-2xl bg-black border border-zinc-850">
+                          <div className="text-xs sm:text-sm text-zinc-400 font-mono uppercase tracking-wider">Confidence Score</div>
+                          <div className="flex items-baseline gap-2 mt-2">
+                            <span className="text-4xl sm:text-5xl font-black text-white font-mono">{currentResult.confidence_score}%</span>
                             <span className="text-xs text-zinc-400 font-mono">Grounded</span>
                           </div>
-                          <div className="w-full bg-zinc-900 rounded-full h-1.5 mt-3 overflow-hidden">
+                          <div className="w-full bg-zinc-900 rounded-full h-2 mt-4 overflow-hidden">
                             <div className="bg-white h-full rounded-full" style={{ width: `${currentResult.confidence_score}%` }}></div>
                           </div>
                         </div>
 
-                        <div className="p-4 rounded-xl bg-black border border-zinc-850">
-                          <div className="text-xs text-zinc-400 font-mono uppercase tracking-wider">Source Credibility</div>
-                          <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-3xl font-black text-white font-mono">{currentResult.source_credibility_score}%</span>
-                            <span className="text-xs text-zinc-400 font-mono">Weighted</span>
+                        <div className="p-5 sm:p-6 rounded-2xl bg-black border border-zinc-850">
+                          <div className="text-xs sm:text-sm text-zinc-400 font-mono uppercase tracking-wider">Source Credibility</div>
+                          <div className="flex items-baseline gap-2 mt-2">
+                            <span className="text-4xl sm:text-5xl font-black text-white font-mono">{currentResult.source_credibility_score}%</span>
+                            <span className="text-xs text-zinc-400 font-mono">Authoritative</span>
                           </div>
-                          <div className="w-full bg-zinc-900 rounded-full h-1.5 mt-3 overflow-hidden">
+                          <div className="w-full bg-zinc-900 rounded-full h-2 mt-4 overflow-hidden">
                             <div className="bg-zinc-300 h-full rounded-full" style={{ width: `${currentResult.source_credibility_score}%` }}></div>
                           </div>
                         </div>
 
-                        <div className="p-4 rounded-xl bg-black border border-zinc-850">
-                          <div className="text-xs text-zinc-400 font-mono uppercase tracking-wider">Evidence Agreement</div>
-                          <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-3xl font-black text-white font-mono">{currentResult.evidence_agreement_score}%</span>
+                        <div className="p-5 sm:p-6 rounded-2xl bg-black border border-zinc-850">
+                          <div className="text-xs sm:text-sm text-zinc-400 font-mono uppercase tracking-wider">Evidence Agreement</div>
+                          <div className="flex items-baseline gap-2 mt-2">
+                            <span className="text-4xl sm:text-5xl font-black text-white font-mono">{currentResult.evidence_agreement_score}%</span>
                             <span className="text-xs text-zinc-400 font-mono">Consensus</span>
                           </div>
-                          <div className="w-full bg-zinc-900 rounded-full h-1.5 mt-3 overflow-hidden">
+                          <div className="w-full bg-zinc-900 rounded-full h-2 mt-4 overflow-hidden">
                             <div className="bg-zinc-400 h-full rounded-full" style={{ width: `${currentResult.evidence_agreement_score}%` }}></div>
                           </div>
                         </div>
@@ -744,30 +738,30 @@
                     </div>
 
                     {/* AI Explanation & Key Reasoning */}
-                    <div className="mono-card rounded-2xl p-6 sm:p-8 space-y-5">
+                    <div className="mono-card rounded-2xl p-6 sm:p-10 space-y-6">
                       <div>
-                        <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-1.5">
+                        <h3 className="text-xs sm:text-sm font-mono font-bold uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
                           <Icon name="sparkles" className="w-4 h-4 text-white" />
                           Verdict Rationale
                         </h3>
-                        <p className="text-zinc-100 text-base sm:text-lg leading-relaxed font-normal">
+                        <p className="text-zinc-100 text-lg sm:text-xl leading-relaxed font-normal">
                           {currentResult.explanation}
                         </p>
                       </div>
 
                       {currentResult.key_reasoning && (
-                        <div className="p-4 rounded-xl bg-black border border-zinc-850">
-                          <div className="text-xs uppercase font-mono font-bold tracking-wider text-zinc-500 mb-1.5">
+                        <div className="p-5 rounded-xl bg-black border border-zinc-850">
+                          <div className="text-xs uppercase font-mono font-bold tracking-wider text-zinc-500 mb-2">
                             Key Analytical Reasoning
                           </div>
-                          <p className="text-sm text-zinc-300 leading-relaxed font-normal">
+                          <p className="text-sm sm:text-base text-zinc-300 leading-relaxed font-normal">
                             {currentResult.key_reasoning}
                           </p>
                         </div>
                       )}
 
                       {currentResult.agreement_analysis && (
-                        <div className="text-xs text-zinc-400 flex items-center gap-2 pt-2 border-t border-zinc-850 font-mono">
+                        <div className="text-xs sm:text-sm text-zinc-400 flex items-center gap-2 pt-3 border-t border-zinc-850 font-mono">
                           <span className="text-zinc-500">Consensus:</span>
                           <span className="text-zinc-300">{currentResult.agreement_analysis}</span>
                         </div>
@@ -775,43 +769,43 @@
                     </div>
 
                     {/* Evidence Columns */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       
                       {/* Supporting Evidence Column */}
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-mono font-bold text-zinc-300 flex items-center gap-2 uppercase tracking-widest px-1">
-                          <Icon name="check" className="w-3.5 h-3.5 text-white" />
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-mono font-bold text-zinc-300 flex items-center gap-2 uppercase tracking-widest px-1">
+                          <Icon name="check" className="w-4 h-4 text-white" />
                           Supporting Evidence ({currentResult.supporting_evidence?.length || 0})
                         </h3>
 
                         {currentResult.supporting_evidence?.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             {currentResult.supporting_evidence.map((chunk) => (
                               <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
                             ))}
                           </div>
                         ) : (
-                          <div className="p-6 rounded-xl bg-zinc-950 border border-zinc-850 text-center text-xs text-zinc-600 font-mono">
+                          <div className="p-8 rounded-2xl bg-zinc-950 border border-zinc-850 text-center text-sm text-zinc-600 font-mono">
                             No direct corroborating evidence identified.
                           </div>
                         )}
                       </div>
 
                       {/* Contradicting Evidence Column */}
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-mono font-bold text-zinc-300 flex items-center gap-2 uppercase tracking-widest px-1">
-                          <Icon name="x" className="w-3.5 h-3.5 text-white" />
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-mono font-bold text-zinc-300 flex items-center gap-2 uppercase tracking-widest px-1">
+                          <Icon name="x" className="w-4 h-4 text-white" />
                           Contradicting Evidence ({currentResult.contradicting_evidence?.length || 0})
                         </h3>
 
                         {currentResult.contradicting_evidence?.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             {currentResult.contradicting_evidence.map((chunk) => (
                               <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
                             ))}
                           </div>
                         ) : (
-                          <div className="p-6 rounded-xl bg-zinc-950 border border-zinc-850 text-center text-xs text-zinc-600 font-mono">
+                          <div className="p-8 rounded-2xl bg-zinc-950 border border-zinc-850 text-center text-sm text-zinc-600 font-mono">
                             No direct contradictory evidence identified.
                           </div>
                         )}
@@ -820,11 +814,11 @@
 
                     {/* Neutral Context */}
                     {currentResult.neutral_evidence?.length > 0 && (
-                      <div className="space-y-3 pt-2">
+                      <div className="space-y-4 pt-2">
                         <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-500 px-1">
                           Contextual Excerpts ({currentResult.neutral_evidence.length})
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {currentResult.neutral_evidence.map((chunk) => (
                             <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
                           ))}
@@ -833,15 +827,15 @@
                     )}
 
                     {/* Sources Table */}
-                    <div className="mono-card rounded-2xl p-6">
-                      <h3 className="text-xs font-mono font-bold text-zinc-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <div className="mono-card rounded-2xl p-6 sm:p-8">
+                      <h3 className="text-sm font-mono font-bold text-zinc-300 uppercase tracking-widest mb-5 flex items-center gap-2">
                         <Icon name="database" className="w-4 h-4 text-white" />
                         Authoritative Sources & Citations
                       </h3>
 
                       {currentResult.retrieved_sources?.length > 0 ? (
                         <div className="overflow-x-auto">
-                          <table className="w-full text-left text-xs">
+                          <table className="w-full text-left text-xs sm:text-sm">
                             <thead className="border-b border-zinc-800 text-zinc-500 font-mono">
                               <tr>
                                 <th className="pb-3 px-3">Document Source</th>
@@ -853,16 +847,16 @@
                             <tbody className="divide-y divide-zinc-900 text-zinc-300 font-mono">
                               {currentResult.retrieved_sources.map((src, i) => (
                                 <tr key={i} className="hover:bg-zinc-900/40">
-                                  <td className="py-3 px-3 font-medium text-white">{src.source || src.document_name}</td>
-                                  <td className="py-3 px-3">
-                                    <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
+                                  <td className="py-3.5 px-3 font-medium text-white">{src.source || src.document_name}</td>
+                                  <td className="py-3.5 px-3">
+                                    <span className="px-2.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
                                       {src.source_type}
                                     </span>
                                   </td>
-                                  <td className="py-3 px-3 text-zinc-500">
+                                  <td className="py-3.5 px-3 text-zinc-500">
                                     {src.pages?.length > 0 ? `pp. ${src.pages.join(', ')}` : 'Full Doc'}
                                   </td>
-                                  <td className="py-3 px-3 text-right font-bold text-white">
+                                  <td className="py-3.5 px-3 text-right font-bold text-white">
                                     {src.credibility_score}%
                                   </td>
                                 </tr>
@@ -884,33 +878,33 @@
             {/* TAB 2: KNOWLEDGE BASE                                    */}
             {/* ======================================================== */}
             {activeTab === 'knowledge' && (
-              <div className="max-w-4xl mx-auto space-y-8">
+              <div className="max-w-6xl mx-auto space-y-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-white font-sans">Knowledge Vault</h2>
-                    <p className="text-sm text-zinc-400">
+                    <h2 className="text-3xl font-bold text-white font-sans">Knowledge Vault</h2>
+                    <p className="text-base text-zinc-400 mt-1">
                       Manage trusted reference documents and indexed ChromaDB vector chunks.
                     </p>
                   </div>
                   <button
                     onClick={handleSeed}
                     disabled={seeding}
-                    className="px-4 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold font-mono flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs sm:text-sm font-bold font-mono flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
                   >
-                    <Icon name="sparkles" className="w-3.5 h-3.5" />
+                    <Icon name="sparkles" className="w-4 h-4" />
                     <span>{seeding ? 'Seeding...' : 'Load Curated Fact Dossiers'}</span>
                   </button>
                 </div>
 
                 {/* Upload Dropzone */}
-                <div className="mono-card rounded-2xl p-8 border-dashed border-2 border-zinc-800 hover:border-zinc-500 transition-all text-center">
-                  <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 text-white flex items-center justify-center mx-auto mb-3">
-                    <Icon name="upload" className="w-6 h-6" />
+                <div className="mono-card rounded-2xl p-10 border-dashed border-2 border-zinc-800 hover:border-zinc-500 transition-all text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 text-white flex items-center justify-center mx-auto mb-4">
+                    <Icon name="upload" className="w-7 h-7" />
                   </div>
-                  <h3 className="text-sm font-bold text-white mb-1 font-sans">Upload Verification Documents</h3>
-                  <p className="text-xs text-zinc-400 mb-4 font-mono">Supports PDF, TXT, MD files. Chunks are automatically indexed into ChromaDB.</p>
+                  <h3 className="text-lg font-bold text-white mb-1.5 font-sans">Upload Verification Documents</h3>
+                  <p className="text-sm text-zinc-400 mb-5 font-mono">Supports PDF, TXT, MD files. Chunks are automatically indexed into ChromaDB.</p>
                   
-                  <label className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold font-mono cursor-pointer transition-all border border-zinc-800">
+                  <label className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs sm:text-sm font-bold font-mono cursor-pointer transition-all border border-zinc-800">
                     <Icon name="upload" className="w-4 h-4" />
                     <span>Select File to Index</span>
                     <input type="file" accept=".pdf,.txt,.md,.json" onChange={handleFileUpload} className="hidden" />
@@ -918,20 +912,20 @@
                 </div>
 
                 {/* Document List Table */}
-                <div className="mono-card rounded-2xl p-6">
-                  <div className="flex items-center justify-between mb-4 font-mono">
-                    <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
+                <div className="mono-card rounded-2xl p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-5 font-mono">
+                    <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
                       <Icon name="database" className="w-4 h-4 text-white" />
                       Indexed Documents ({documents.length})
                     </h3>
-                    <span className="text-xs text-zinc-500">
+                    <span className="text-xs sm:text-sm text-zinc-500">
                       Total Vector Chunks: <strong className="text-white">{health?.indexed_chunks || 0}</strong>
                     </span>
                   </div>
 
                   {documents.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs font-mono">
+                      <table className="w-full text-left text-xs sm:text-sm font-mono">
                         <thead className="border-b border-zinc-800 text-zinc-500">
                           <tr>
                             <th className="pb-3 px-3">Filename / Source</th>
@@ -945,19 +939,19 @@
                         <tbody className="divide-y divide-zinc-900 text-zinc-300">
                           {documents.map((doc) => (
                             <tr key={doc.id} className="hover:bg-zinc-900/40">
-                              <td className="py-3 px-3 font-medium text-white">{doc.filename}</td>
-                              <td className="py-3 px-3">
-                                <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
+                              <td className="py-3.5 px-3 font-medium text-white">{doc.filename}</td>
+                              <td className="py-3.5 px-3">
+                                <span className="px-2.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
                                   {doc.source_type}
                                 </span>
                               </td>
-                              <td className="py-3 px-3 text-zinc-500">{doc.file_type}</td>
-                              <td className="py-3 px-3 font-bold text-white">{doc.number_of_chunks}</td>
-                              <td className="py-3 px-3 text-zinc-500">{doc.upload_date}</td>
-                              <td className="py-3 px-3 text-right">
+                              <td className="py-3.5 px-3 text-zinc-500">{doc.file_type}</td>
+                              <td className="py-3.5 px-3 font-bold text-white">{doc.number_of_chunks}</td>
+                              <td className="py-3.5 px-3 text-zinc-500">{doc.upload_date}</td>
+                              <td className="py-3.5 px-3 text-right">
                                 <button
                                   onClick={() => handleDeleteDoc(doc.id, doc.filename)}
-                                  className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-900 transition-colors"
+                                  className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-900 transition-colors"
                                   title="Delete Document & Chunks"
                                 >
                                   <Icon name="trash" className="w-4 h-4" />
@@ -969,7 +963,7 @@
                       </table>
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-xs text-zinc-600 font-mono">
+                    <div className="text-center py-10 text-sm text-zinc-600 font-mono">
                       No documents indexed. Click "Load Curated Fact Dossiers" above to initialize.
                     </div>
                   )}
@@ -981,22 +975,22 @@
             {/* TAB 3: VERIFICATION HISTORY                              */}
             {/* ======================================================== */}
             {activeTab === 'history' && (
-              <div className="max-w-4xl mx-auto space-y-6">
+              <div className="max-w-6xl mx-auto space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-white font-sans">Audit History</h2>
-                    <p className="text-sm text-zinc-400">
+                    <h2 className="text-3xl font-bold text-white font-sans">Audit History</h2>
+                    <p className="text-base text-zinc-400 mt-1">
                       Chronological ledger of fact verification queries and generated reports.
                     </p>
                   </div>
 
                   {/* Filter by Verdict */}
-                  <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs font-mono">
+                  <div className="flex items-center gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800 text-xs sm:text-sm font-mono">
                     {['ALL', 'SUPPORTED', 'REFUTED', 'MISLEADING', 'INSUFFICIENT EVIDENCE'].map((f) => (
                       <button
                         key={f}
                         onClick={() => setHistoryFilter(f)}
-                        className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                        className={`px-3.5 py-1.5 rounded-lg font-medium transition-all ${
                           historyFilter === f ? 'bg-white text-black font-bold' : 'text-zinc-400 hover:text-white'
                         }`}
                       >
@@ -1007,10 +1001,10 @@
                 </div>
 
                 {/* History Table */}
-                <div className="mono-card rounded-2xl p-6">
+                <div className="mono-card rounded-2xl p-6 sm:p-8">
                   {history.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
+                      <table className="w-full text-left text-xs sm:text-sm">
                         <thead className="border-b border-zinc-800 text-zinc-500 font-mono">
                           <tr>
                             <th className="pb-3 px-3">Claim Statement</th>
@@ -1025,16 +1019,16 @@
                             .filter(h => historyFilter === 'ALL' || h.verdict === historyFilter)
                             .map((item) => (
                               <tr key={item.id} className="hover:bg-zinc-900/40">
-                                <td className="py-3 px-3 font-medium text-white max-w-md truncate font-sans">"{item.claim}"</td>
-                                <td className="py-3 px-3">
+                                <td className="py-3.5 px-3 font-medium text-white max-w-lg truncate font-sans">"{item.claim}"</td>
+                                <td className="py-3.5 px-3">
                                   <VerdictBadge verdict={item.verdict} size="sm" />
                                 </td>
-                                <td className="py-3 px-3 font-bold text-white">{item.confidence_score}%</td>
-                                <td className="py-3 px-3 text-zinc-500">{item.timestamp}</td>
-                                <td className="py-3 px-3 text-right">
+                                <td className="py-3.5 px-3 font-bold text-white">{item.confidence_score}%</td>
+                                <td className="py-3.5 px-3 text-zinc-500">{item.timestamp}</td>
+                                <td className="py-3.5 px-3 text-right">
                                   <button
                                     onClick={() => setHistoryModalItem(item)}
-                                    className="px-3 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 font-medium transition-colors"
+                                    className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 hover:text-white border border-zinc-800 font-medium transition-colors"
                                   >
                                     Inspect
                                   </button>
@@ -1045,7 +1039,7 @@
                       </table>
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-xs text-zinc-600 font-mono">
+                    <div className="text-center py-10 text-sm text-zinc-600 font-mono">
                       No verification logs recorded yet.
                     </div>
                   )}
@@ -1054,36 +1048,36 @@
                 {/* Record Inspection Modal */}
                 {historyModalItem && (
                   <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="mono-card rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 space-y-5 border-zinc-700 shadow-2xl relative">
+                    <div className="mono-card rounded-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-10 space-y-6 border-zinc-700 shadow-2xl relative">
                       <div className="flex items-start justify-between gap-4 pb-4 border-b border-zinc-800">
                         <div>
                           <span className="text-xs uppercase font-mono font-bold text-zinc-500">Audit Record</span>
-                          <h3 className="text-lg font-bold text-white mt-1 font-sans">"{historyModalItem.claim}"</h3>
+                          <h3 className="text-xl font-bold text-white mt-1 font-sans">"{historyModalItem.claim}"</h3>
                         </div>
                         <button
                           onClick={() => setHistoryModalItem(null)}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900"
+                          className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900"
                         >
                           <Icon name="x" className="w-5 h-5" />
                         </button>
                       </div>
 
-                      <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-black border border-zinc-800">
+                      <div className="flex items-center justify-between gap-4 p-5 rounded-xl bg-black border border-zinc-800">
                         <VerdictBadge verdict={historyModalItem.verdict} size="md" />
                         <div className="text-right font-mono">
                           <div className="text-xs text-zinc-500">Confidence</div>
-                          <div className="text-lg font-bold text-white">{historyModalItem.confidence_score}%</div>
+                          <div className="text-xl font-bold text-white">{historyModalItem.confidence_score}%</div>
                         </div>
                       </div>
 
                       <div>
-                        <h4 className="text-xs uppercase font-mono font-bold text-zinc-400 tracking-wider mb-1.5">Verdict Rationale</h4>
-                        <p className="text-sm text-zinc-200 leading-relaxed font-sans">{historyModalItem.explanation}</p>
+                        <h4 className="text-xs uppercase font-mono font-bold text-zinc-400 tracking-wider mb-2">Verdict Rationale</h4>
+                        <p className="text-base text-zinc-200 leading-relaxed font-sans">{historyModalItem.explanation}</p>
                       </div>
 
                       {historyModalItem.key_reasoning && (
-                        <div className="p-4 rounded-xl bg-black border border-zinc-850 text-xs text-zinc-300 font-sans">
-                          <span className="font-bold text-zinc-400 uppercase font-mono block mb-1">Key Reasoning:</span>
+                        <div className="p-5 rounded-xl bg-black border border-zinc-850 text-sm text-zinc-300 font-sans">
+                          <span className="font-bold text-zinc-400 uppercase font-mono block mb-1.5">Key Reasoning:</span>
                           {historyModalItem.key_reasoning}
                         </div>
                       )}
@@ -1091,7 +1085,7 @@
                       <div className="flex justify-end pt-4 border-t border-zinc-800">
                         <button
                           onClick={() => setHistoryModalItem(null)}
-                          className="px-4 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold font-mono"
+                          className="px-6 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold font-mono"
                         >
                           Close Record
                         </button>
@@ -1106,59 +1100,59 @@
             {/* TAB 4: ANALYTICS DASHBOARD                               */}
             {/* ======================================================== */}
             {activeTab === 'analytics' && analytics && (
-              <div className="max-w-4xl mx-auto space-y-6">
+              <div className="max-w-6xl mx-auto space-y-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-white font-sans">Verification Analytics</h2>
-                  <p className="text-sm text-zinc-400">
-                    Distribution statistics, model confidence metrics, and knowledge base coverage.
+                  <h2 className="text-3xl font-bold text-white font-sans">Verification Analytics</h2>
+                  <p className="text-base text-zinc-400 mt-1">
+                    Distribution statistics, model confidence metrics, and knowledge vault coverage.
                   </p>
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="mono-card rounded-2xl p-5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+                  <div className="mono-card rounded-2xl p-6">
                     <div className="text-xs text-zinc-500 font-mono uppercase">Total Checks</div>
-                    <div className="text-3xl font-black text-white font-mono mt-1">{analytics.total_claims_verified}</div>
+                    <div className="text-4xl font-black text-white font-mono mt-2">{analytics.total_claims_verified}</div>
                   </div>
-                  <div className="mono-card rounded-2xl p-5">
+                  <div className="mono-card rounded-2xl p-6">
                     <div className="text-xs text-zinc-500 font-mono uppercase">Avg Confidence</div>
-                    <div className="text-3xl font-black text-white font-mono mt-1">{analytics.average_confidence}%</div>
+                    <div className="text-4xl font-black text-white font-mono mt-2">{analytics.average_confidence}%</div>
                   </div>
-                  <div className="mono-card rounded-2xl p-5">
+                  <div className="mono-card rounded-2xl p-6">
                     <div className="text-xs text-zinc-500 font-mono uppercase">Avg Credibility</div>
-                    <div className="text-3xl font-black text-white font-mono mt-1">{analytics.average_source_credibility}%</div>
+                    <div className="text-4xl font-black text-white font-mono mt-2">{analytics.average_source_credibility}%</div>
                   </div>
-                  <div className="mono-card rounded-2xl p-5">
+                  <div className="mono-card rounded-2xl p-6">
                     <div className="text-xs text-zinc-500 font-mono uppercase">Vault Chunks</div>
-                    <div className="text-3xl font-black text-white font-mono mt-1">{analytics.total_chunks}</div>
+                    <div className="text-4xl font-black text-white font-mono mt-2">{analytics.total_chunks}</div>
                   </div>
                 </div>
 
                 {/* Visualizations */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Doughnut Chart */}
-                  <div className="mono-card rounded-2xl p-6">
-                    <h3 className="text-xs font-mono font-bold text-zinc-300 uppercase tracking-widest mb-4">
+                  <div className="mono-card rounded-2xl p-6 sm:p-8">
+                    <h3 className="text-xs font-mono font-bold text-zinc-300 uppercase tracking-widest mb-5">
                       Verdict Distribution
                     </h3>
-                    <div className="w-full max-w-xs mx-auto">
+                    <div className="w-full max-w-sm mx-auto">
                       <canvas ref={chartRef1}></canvas>
                     </div>
                   </div>
 
                   {/* Top Sources */}
-                  <div className="mono-card rounded-2xl p-6">
-                    <h3 className="text-xs font-mono font-bold text-zinc-300 uppercase tracking-widest mb-4">
+                  <div className="mono-card rounded-2xl p-6 sm:p-8">
+                    <h3 className="text-xs font-mono font-bold text-zinc-300 uppercase tracking-widest mb-5">
                       Top Authoritative Sources
                     </h3>
-                    <div className="space-y-3 font-mono">
+                    <div className="space-y-3.5 font-mono">
                       {analytics.top_sources?.map((src, idx) => (
-                        <div key={idx} className="p-3 rounded-xl bg-black border border-zinc-850 flex items-center justify-between">
+                        <div key={idx} className="p-4 rounded-xl bg-black border border-zinc-850 flex items-center justify-between">
                           <div>
-                            <div className="text-xs font-bold text-white">{src.source}</div>
-                            <div className="text-[11px] text-zinc-500">{src.source_type}</div>
+                            <div className="text-sm font-bold text-white">{src.source}</div>
+                            <div className="text-xs text-zinc-500 mt-0.5">{src.source_type}</div>
                           </div>
-                          <span className="px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-white text-xs font-bold">
+                          <span className="px-3 py-1 rounded bg-zinc-900 border border-zinc-800 text-white text-xs font-bold">
                             {src.doc_count} doc(s)
                           </span>
                         </div>
@@ -1173,20 +1167,20 @@
             {/* TAB 5: ENGINE CONFIGURATION                              */}
             {/* ======================================================== */}
             {activeTab === 'settings' && (
-              <div className="max-w-3xl mx-auto space-y-6">
+              <div className="max-w-4xl mx-auto space-y-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-white font-sans">Engine Settings</h2>
-                  <p className="text-sm text-zinc-400">
+                  <h2 className="text-3xl font-bold text-white font-sans">Engine Settings</h2>
+                  <p className="text-base text-zinc-400 mt-1">
                     Configure LLM reasoning provider, enter custom API keys, or inspect runtime diagnostics.
                   </p>
                 </div>
 
-                <div className="mono-card rounded-2xl p-6 sm:p-8 space-y-6">
+                <div className="mono-card rounded-2xl p-6 sm:p-10 space-y-8">
                   <div>
-                    <label className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-widest block mb-2">
+                    <label className="text-xs sm:text-sm font-mono font-bold text-zinc-400 uppercase tracking-widest block mb-3">
                       Reasoning Provider
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
                       {[
                         { id: 'auto', name: 'Auto-Select', desc: 'Detects configured keys or offline' },
                         { id: 'offline', name: 'Offline NLI Engine', desc: 'Zero-dependency local reasoner' },
@@ -1197,21 +1191,21 @@
                         <button
                           key={p.id}
                           onClick={() => setSelectedProvider(p.id)}
-                          className={`p-3 rounded-xl border text-left transition-all ${
+                          className={`p-4 rounded-xl border text-left transition-all ${
                             selectedProvider === p.id 
                               ? 'bg-white text-black border-white shadow-sm' 
                               : 'bg-black border-zinc-850 text-zinc-400 hover:text-white hover:border-zinc-700'
                           }`}
                         >
-                          <div className="text-xs font-bold">{p.name}</div>
-                          <div className={`text-[10px] mt-0.5 ${selectedProvider === p.id ? 'text-zinc-700' : 'text-zinc-600'}`}>{p.desc}</div>
+                          <div className="text-sm font-bold">{p.name}</div>
+                          <div className={`text-xs mt-1 ${selectedProvider === p.id ? 'text-zinc-700' : 'text-zinc-600'}`}>{p.desc}</div>
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-widest block mb-2">
+                    <label className="text-xs sm:text-sm font-mono font-bold text-zinc-400 uppercase tracking-widest block mb-3">
                       Custom API Key (Optional)
                     </label>
                     <input
@@ -1222,34 +1216,34 @@
                         localStorage.setItem('truthlens_api_key', e.target.value);
                       }}
                       placeholder="e.g. AIzaSy... or gsk_... or sk-..."
-                      className="w-full bg-black rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-700 border border-zinc-800 focus:outline-none focus:border-white font-mono"
+                      className="w-full bg-black rounded-xl px-5 py-3 text-base text-zinc-100 placeholder-zinc-700 border border-zinc-800 focus:outline-none focus:border-white font-mono"
                     />
-                    <p className="text-[11px] text-zinc-500 mt-1.5 font-mono">
+                    <p className="text-xs text-zinc-500 mt-2 font-mono">
                       Keys are saved in local browser storage only for this session. Leave blank to use the built-in Offline NLI Engine.
                     </p>
                   </div>
 
                   {/* Architecture Diagnostics */}
-                  <div className="pt-4 border-t border-zinc-850 space-y-3 font-mono">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-zinc-400">
+                  <div className="pt-6 border-t border-zinc-850 space-y-4 font-mono">
+                    <h4 className="text-xs sm:text-sm font-bold uppercase tracking-widest text-zinc-400">
                       System Architecture & Pipeline Status
                     </h4>
-                    <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="p-3 rounded-xl bg-black border border-zinc-850">
+                    <div className="grid grid-cols-2 gap-4 text-xs sm:text-sm">
+                      <div className="p-4 rounded-xl bg-black border border-zinc-850">
                         <div className="text-zinc-600">Vector Database</div>
-                        <div className="text-white font-bold mt-0.5">ChromaDB Persistent (HNSW)</div>
+                        <div className="text-white font-bold mt-1">ChromaDB Persistent (HNSW)</div>
                       </div>
-                      <div className="p-3 rounded-xl bg-black border border-zinc-850">
+                      <div className="p-4 rounded-xl bg-black border border-zinc-850">
                         <div className="text-zinc-600">Embedding Model</div>
-                        <div className="text-white font-bold mt-0.5">all-MiniLM-L6-v2 (384-dim)</div>
+                        <div className="text-white font-bold mt-1">all-MiniLM-L6-v2 (384-dim)</div>
                       </div>
-                      <div className="p-3 rounded-xl bg-black border border-zinc-850">
+                      <div className="p-4 rounded-xl bg-black border border-zinc-850">
                         <div className="text-zinc-600">Reranker Architecture</div>
-                        <div className="text-white font-bold mt-0.5">Hybrid Semantic + Lexical</div>
+                        <div className="text-white font-bold mt-1">Hybrid Semantic + Lexical</div>
                       </div>
-                      <div className="p-3 rounded-xl bg-black border border-zinc-850">
+                      <div className="p-4 rounded-xl bg-black border border-zinc-850">
                         <div className="text-zinc-600">Persistence Layer</div>
-                        <div className="text-white font-bold mt-0.5">SQLite Thread-Safe Registry</div>
+                        <div className="text-white font-bold mt-1">SQLite Thread-Safe Registry</div>
                       </div>
                     </div>
                   </div>
@@ -1260,14 +1254,14 @@
           </main>
 
           {/* Minimalist Monochrome Footer */}
-          <footer className="border-t border-zinc-850 bg-black py-6 text-center text-xs text-zinc-600 font-mono">
-            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <footer className="border-t border-zinc-850 bg-black py-8 text-center text-xs text-zinc-600 font-mono">
+            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Icon name="shield" className="w-4 h-4 text-white" />
                 <span className="font-bold text-zinc-300">TruthLens</span>
                 <span>— Explainable Retrieval-Augmented Generation</span>
               </div>
-              <div className="text-zinc-500 text-[11px]">
+              <div className="text-zinc-500 text-xs">
                 St. Francis Institute of Technology • Department of AI & Data Science
               </div>
             </div>

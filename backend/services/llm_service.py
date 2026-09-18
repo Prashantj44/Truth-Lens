@@ -242,9 +242,10 @@ class LLMService:
             "the", "a", "an", "and", "or", "in", "on", "at", "to", "for",
             "is", "are", "was", "were", "of", "with", "by", "that", "this",
             "it", "as", "from", "be", "has", "have", "had", "its", "will",
-            "been", "into", "than", "then", "more", "most", "also", "year"
+            "been", "into", "than", "then", "more", "most", "also", "year",
+            "what", "who", "when", "where", "why", "how", "does", "did", "do"
         }
-        all_claim_words = re.findall(r"\b\w{3,}\b", claim_lower)
+        all_claim_words = re.findall(r"\b[a-zA-Z0-9]{2,}\b", claim_lower)
         claim_content_words = set(w for w in all_claim_words if w not in stopwords)
         if not claim_content_words:
             claim_content_words = set(all_claim_words)
@@ -275,15 +276,18 @@ class LLMService:
             "not cure"
         ]
 
+        total_claim_kw = len(claim_content_words)
+
         for chunk in chunks:
             text = chunk.get("text", "")
             text_lower = text.lower()
-            all_text_words = set(re.findall(r"\b\w{3,}\b", text_lower))
+            all_text_words = set(re.findall(r"\b[a-zA-Z0-9]{2,}\b", text_lower))
             text_content_words = set(w for w in all_text_words if w not in stopwords)
             relevance = float(chunk.get("relevance_score", 0.0))
 
-            # Shared content words ratio
-            overlap = len(claim_content_words.intersection(text_content_words)) / max(1, len(claim_content_words))
+            matched_keywords = claim_content_words.intersection(text_content_words)
+            overlap_count = len(matched_keywords)
+            overlap = overlap_count / max(1, total_claim_kw)
             
             # Check numerical / entity alignments or mismatches
             text_numbers = re.findall(r"\b\d+(?:\.\d+)?\b", text_lower)
@@ -296,17 +300,24 @@ class LLMService:
             stance = "NEUTRAL"
             rationale = "Mentions related context but neither confirms nor refutes directly."
 
-            # Low topical alignment gate: If chunk is completely off-topic, skip stance analysis
-            if overlap < 0.15:
+            # Entity Grounding Threshold: A chunk must contain sufficient subject keywords to take a stance
+            # If claim has 3+ content words, matching only 1 is just generic background context
+            has_sufficient_subject_grounding = (
+                (total_claim_kw >= 3 and overlap_count >= 2) or
+                (total_claim_kw == 2 and overlap_count >= 2) or
+                (total_claim_kw == 1 and overlap_count == 1)
+            )
+
+            if not has_sufficient_subject_grounding or overlap < 0.20:
                 stance = "NEUTRAL"
-                rationale = "Low contextual overlap with the specific assertion."
+                rationale = "Insufficient entity overlap with the specific claim subject."
                 neutral_chunks.append(chunk)
-            # Check explicit refutation first — only when the chunk is topically relevant
-            elif chunk_has_explicit_refutation and overlap >= 0.20:
+            # Check explicit refutation first — only when the chunk is topically grounded
+            elif chunk_has_explicit_refutation and overlap >= 0.35:
                 stance = "CONTRADICTING"
                 rationale = "Directly and explicitly refutes the factual premise asserted in the claim."
                 contradicting_chunks.append(chunk)
-            elif overlap >= 0.28:
+            elif overlap >= 0.30:
                 # If claim is specifically about viruses and chunk only talks about bacteria, it's NEUTRAL context
                 if has_viral_claim and "virus" not in text_lower and "viral" not in text_lower and "cold" not in text_lower:
                     stance = "NEUTRAL"
@@ -350,9 +361,9 @@ class LLMService:
                     stance = "SUPPORTING"
                     rationale = "Directly corroborates the assertions made in the claim with matching factual data."
                     supporting_chunks.append(chunk)
-            elif overlap >= 0.15:
+            else:
                 stance = "NEUTRAL"
-                rationale = "Provides background context but lacks direct verification details."
+                rationale = "Provides background context but lacks decisive corroboration details."
                 neutral_chunks.append(chunk)
 
             chunk_classifications.append({
@@ -364,36 +375,31 @@ class LLMService:
         # Calculate final verdict
         top_relevance = max([c.get("relevance_score", 0.0) for c in chunks]) if chunks else 0.0
 
-        if top_relevance < 0.28 and not supporting_chunks and not contradicting_chunks:
+        if not supporting_chunks and not contradicting_chunks:
             verdict = "INSUFFICIENT EVIDENCE"
             confidence = 35.0
-            explanation = "The available trusted knowledge base does not contain sufficiently detailed evidence or direct factual reports to verify or refute this claim."
-            key_reasoning = "Top evidence chunks exhibit low semantic and lexical alignment with the claim. No conclusive corroboration or disproof was identified."
+            explanation = "The available trusted knowledge vault does not contain sufficiently detailed evidence or direct factual reports to verify or refute this assertion."
+            key_reasoning = "Retrieved excerpts provide contextual information but lack direct confirmation or counter-evidence for the specific claim entities."
         elif len(contradicting_chunks) > 0 and len(supporting_chunks) == 0:
             verdict = "REFUTED"
             confidence = min(98.0, 85.0 + (len(contradicting_chunks) * 4.0))
-            explanation = "The claim is refuted by authoritative documentation in the knowledge base. Retrieved evidence directly contradicts the factual assertion."
+            explanation = "The claim is refuted by authoritative documentation in the knowledge vault. Retrieved evidence directly contradicts the factual assertion."
             key_reasoning = f"Identified {len(contradicting_chunks)} authoritative evidence chunk(s) detailing explicit counter-evidence and contradictory findings."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) == 0:
             verdict = "SUPPORTED"
             confidence = min(98.0, 82.0 + (len(supporting_chunks) * 4.0))
-            explanation = "The claim is supported by credible evidence in the knowledge base, with multiple matching factual assertions and authoritative data points."
+            explanation = "The claim is supported by credible evidence in the knowledge vault, with matching factual assertions and authoritative data points."
             key_reasoning = f"Corroborated by {len(supporting_chunks)} retrieved source chunk(s) confirming the entities, timing, and core factual premises."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) > 0:
-            # If there are explicit refutations and they dominate, REFUTE
-            has_explicit = any(
-                any(p in chunks[i].get("text", "").lower() for p in explicit_refutation_phrases)
-                for i, c in enumerate(chunk_classifications) if c["stance"] == "CONTRADICTING"
-            )
-            if has_explicit and len(contradicting_chunks) >= len(supporting_chunks):
+            if len(contradicting_chunks) >= 3 * len(supporting_chunks):
                 verdict = "REFUTED"
                 confidence = 88.0
-                explanation = "The claim is refuted. While related topics are discussed in the knowledge base, direct evidence explicitly disproves the core assertion."
-                key_reasoning = f"Direct counter-evidence contradicts the claim ({len(contradicting_chunks)} contradicting vs {len(supporting_chunks)} partial supporting chunks)."
+                explanation = "The claim is refuted. While related topics are discussed in the knowledge vault, direct evidence explicitly disproves the core assertion."
+                key_reasoning = f"Direct counter-evidence overwhelmingly contradicts the claim ({len(contradicting_chunks)} contradicting vs {len(supporting_chunks)} partial supporting chunks)."
             else:
                 verdict = "MISLEADING"
                 confidence = 82.5
-                explanation = "The claim is misleading. While portions of the statement are based on factual truths or projections, it omits critical context, caveats, or conflicting statistics."
+                explanation = "The claim is misleading. While portions of the statement are based on factual truths or projections (e.g. PPP rankings or growth targets), it omits critical context, caveats, or conflicting official statistics (e.g. nominal GDP rankings)."
                 key_reasoning = f"Discovered both corroborating ({len(supporting_chunks)}) and contradicting ({len(contradicting_chunks)}) data points, indicating partial accuracy presented without necessary qualification."
         else:
             verdict = "INSUFFICIENT EVIDENCE"
@@ -463,12 +469,12 @@ class LLMService:
         # Find sentences containing negation
         sentences = re.split(r'[.!?\n]', text_lower)
         for sent in sentences:
-            sent_words = set(re.findall(r"\b\w{3,}\b", sent))
+            sent_words = set(re.findall(r"\b[a-zA-Z0-9]{2,}\b", sent))
             has_neg = any(m in sent_words for m in negation_markers)
             if has_neg:
                 # Check if this negation sentence also contains claim keywords
                 claim_overlap = len(claim_words.intersection(sent_words))
-                if claim_overlap >= 2:
+                if claim_overlap >= 2 or (len(claim_words) == 1 and claim_overlap == 1):
                     return True
         return False
 
