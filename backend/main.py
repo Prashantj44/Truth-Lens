@@ -1,3 +1,4 @@
+import asyncio
 import os
 from pathlib import Path
 from fastapi import FastAPI
@@ -7,6 +8,7 @@ from fastapi.responses import FileResponse
 
 from backend.api.routes import router as api_router, seed_trusted_knowledge_base
 from backend.services.retrieval_service import retrieval_service
+from backend.services.news_sync_service import news_sync_service
 from backend.database.db import init_db
 
 app = FastAPI(
@@ -29,7 +31,7 @@ app.include_router(api_router)
 
 @app.on_event("startup")
 async def startup_event():
-    """Initializes SQLite database and auto-seeds trusted fact dossiers if empty."""
+    """Initializes SQLite database, auto-seeds dossiers, and launches background news scheduler."""
     init_db()
     try:
         # If vector database is empty, automatically seed initial trusted documents
@@ -40,6 +42,13 @@ async def startup_event():
             print(f"[TruthLens] Initial seed complete. Chunks indexed: {retrieval_service.count()}")
     except Exception as e:
         print(f"[TruthLens] Notice on startup seeding: {e}")
+
+    # Launch daily news sync background scheduler
+    try:
+        asyncio.create_task(news_sync_service.start_daily_scheduler())
+        print("[TruthLens] Daily live news automated scheduler task launched.")
+    except Exception as e:
+        print(f"[TruthLens] Failed to launch news scheduler: {e}")
 
 @app.get("/health")
 def health_check():

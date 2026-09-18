@@ -46,6 +46,21 @@ def init_db():
         )
     """)
     
+    # Daily news articles table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS daily_news_articles (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            source_name TEXT NOT NULL,
+            url TEXT UNIQUE,
+            content_snippet TEXT,
+            published_date TEXT,
+            ingested_at TEXT NOT NULL,
+            chunks_indexed INTEGER DEFAULT 0,
+            category TEXT DEFAULT 'WORLD'
+        )
+    """)
+    
     conn.commit()
     conn.close()
 
@@ -245,3 +260,64 @@ def get_analytics():
         "total_chunks": total_chunks,
         "top_sources": top_sources
     }
+
+def save_news_article(
+    title: str,
+    source_name: str,
+    url: str,
+    content_snippet: str,
+    published_date: str,
+    chunks_indexed: int = 1,
+    category: str = "WORLD",
+    article_id: Optional[str] = None
+) -> str:
+    article_id = article_id or str(uuid.uuid4())
+    ingested_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT OR REPLACE INTO daily_news_articles
+        (id, title, source_name, url, content_snippet, published_date, ingested_at, chunks_indexed, category)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (article_id, title, source_name, url, content_snippet, published_date, ingested_at, chunks_indexed, category))
+    conn.commit()
+    conn.close()
+    return article_id
+
+def is_news_url_indexed(url: str) -> bool:
+    if not url:
+        return False
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM daily_news_articles WHERE url = ?", (url,))
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
+
+def get_recent_news_articles(limit: int = 50) -> List[Dict[str, Any]]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM daily_news_articles ORDER BY ingested_at DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_news_stats() -> Dict[str, Any]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) as total_articles, SUM(chunks_indexed) as total_news_chunks FROM daily_news_articles")
+    row = cursor.fetchone()
+    total_articles = row["total_articles"] or 0
+    total_chunks = row["total_news_chunks"] or 0
+    
+    cursor.execute("SELECT ingested_at FROM daily_news_articles ORDER BY ingested_at DESC LIMIT 1")
+    last_row = cursor.fetchone()
+    last_sync = last_row["ingested_at"] if last_row else "Never"
+    
+    conn.close()
+    return {
+        "total_articles": total_articles,
+        "total_news_chunks": total_chunks,
+        "last_sync": last_sync
+    }
+

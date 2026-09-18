@@ -23,6 +23,7 @@ from backend.database.db import (
     get_analytics
 )
 from backend.config import UPLOADS_DIR, TRUSTED_DOCS_DIR
+from backend.services.news_sync_service import news_sync_service
 
 router = APIRouter(prefix="/api")
 
@@ -187,3 +188,30 @@ def seed_trusted_knowledge_base():
         "seeded_documents": seeded_docs,
         "total_chunks_indexed": total_chunks
     }
+
+@router.get("/news/status")
+def get_news_status():
+    """
+    Returns the real-time health and synchronization stats of the daily news engine,
+    including total ingested articles, active RSS feeds, and recent headlines.
+    """
+    return news_sync_service.get_status()
+
+@router.post("/news/sync")
+def sync_daily_news(max_per_feed: int = 10):
+    """
+    Manually triggers an immediate pull and indexing of the latest 24h news 
+    from trusted sources (Reuters, BBC World, AP, PolitiFact, Google News).
+    """
+    result = news_sync_service.sync_live_news(max_per_feed=max_per_feed)
+    return result
+
+@router.post("/news/train-dataset")
+def train_on_existing_news_dataset(max_articles: int = 100):
+    """
+    Ingests and vector-indexes historical news articles and PolitiFact ground-truth
+    records from existing datasets (ISOT Reuters & LIAR).
+    """
+    result = news_sync_service.train_on_existing_news_dataset(max_articles=max_articles)
+    return result
+

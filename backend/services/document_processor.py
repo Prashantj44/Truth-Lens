@@ -166,3 +166,56 @@ def process_document(
             })
 
     return all_chunks
+
+class DocumentProcessor:
+    def __init__(self):
+        pass
+
+    def clean_text(self, text: str) -> str:
+        return clean_text(text)
+
+    def detect_source_type(self, filename: str, source_hint: str = "") -> str:
+        return detect_source_type(filename, source_hint)
+
+    def process_document(self, file_path: Path, source_name: Optional[str] = None, source_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        return process_document(file_path, source_name, source_type)
+
+    def chunk_text(
+        self,
+        text: str,
+        chunk_size: int = CHUNK_SIZE,
+        overlap: int = CHUNK_OVERLAP,
+        source_name: str = "Live Feed",
+        file_type: str = "NEWS",
+        source_type: str = "Established News",
+        extra_metadata: Optional[Dict[str, Any]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Chunks raw text string and returns list of chunk dicts formatted for ChromaDB retrieval.
+        """
+        raw_chunks = recursive_chunk_text(clean_text(text), chunk_size=chunk_size, chunk_overlap=overlap)
+        chunks = []
+        doc_stem = re.sub(r'[^a-zA-Z0-9]', '_', source_name)[:20]
+
+        for idx, chunk_str in enumerate(raw_chunks):
+            if len(chunk_str.strip()) < 20:
+                continue
+            chunk_id = f"news_{doc_stem}_{idx}_{uuid.uuid4().hex[:6]}"
+            chunk_dict = {
+                "chunk_id": chunk_id,
+                "document_name": source_name,
+                "source": source_name,
+                "source_type": source_type,
+                "page_number": 1,
+                "text": chunk_str,
+                "char_count": len(chunk_str)
+            }
+            if extra_metadata:
+                chunk_dict.update(extra_metadata)
+            chunks.append(chunk_dict)
+
+        return chunks
+
+# Singleton instance
+document_processor = DocumentProcessor()
+
