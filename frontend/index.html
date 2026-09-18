@@ -141,7 +141,7 @@
         case 'book':
           return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>;
         case 'globe':
-          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2" /><path strokeLinecap="round" strokeWidth="2" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" /></svg>;
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2" /><path strokeLinecap="round" strokeWidth="2" d="M21 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" /></svg>;
         default:
           return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2" /></svg>;
       }
@@ -356,7 +356,7 @@
         }
       };
 
-      // Handle Core Claim Verification
+      // Handle Core Claim Verification (Only triggered when user clicks "Verify Claim" or presses Ctrl+Enter)
       const handleVerify = async (claimToVerify) => {
         const text = (claimToVerify || claimInput).trim();
         if (!text) {
@@ -405,8 +405,8 @@
         }
       };
 
-      // Handle URL Extraction & Verification
-      const handleVerifyUrl = async () => {
+      // Handle URL Extraction (Loads headline into editor WITHOUT auto-verifying)
+      const handleExtractUrl = async () => {
         const u = urlInput.trim();
         if (!u) {
           showToast('Please enter an online news article URL.', 'error');
@@ -424,8 +424,8 @@
           if (data.status === 'success' && data.extracted_claim) {
             setClaimInput(data.extracted_claim);
             setInputMode('text');
-            showToast(`Extracted: "${data.extracted_claim.slice(0, 50)}..."`, 'success');
-            handleVerify(data.extracted_claim);
+            setCurrentResult(null);
+            showToast('Headline extracted! Click "Verify Claim" to audit.', 'success');
           } else {
             showToast(data.message || 'Could not extract a readable headline from this link.', 'error');
           }
@@ -436,8 +436,8 @@
         }
       };
 
-      // Handle WhatsApp Forward Cleaning & Verification
-      const handleVerifyForward = async () => {
+      // Handle WhatsApp Forward Cleaning (Loads cleaned claim into editor WITHOUT auto-verifying)
+      const handleCleanForward = async () => {
         const text = forwardInput.trim();
         if (!text) {
           showToast('Please paste a WhatsApp forward or viral message.', 'error');
@@ -455,8 +455,8 @@
           const clean = data.cleaned_claim || text;
           setClaimInput(clean);
           setInputMode('text');
-          showToast(`Extracted assertion: "${clean.slice(0, 50)}..."`, 'success');
-          handleVerify(clean);
+          setCurrentResult(null);
+          showToast('Assertion isolated! Click "Verify Claim" to audit.', 'success');
         } catch (err) {
           showToast('Forward cleaning failed: ' + err.message, 'error');
         } finally {
@@ -768,7 +768,10 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                       ].map((m) => (
                         <button
                           key={m.id}
-                          onClick={() => setInputMode(m.id)}
+                          onClick={() => {
+                            setInputMode(m.id);
+                            setCurrentResult(null);
+                          }}
                           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
                             inputMode === m.id
                               ? 'bg-zinc-800 text-white font-semibold'
@@ -785,9 +788,13 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     {inputMode === 'text' && (
                       <div className="space-y-4">
                         <textarea
+                          id="claim-editor"
                           rows={3}
                           value={claimInput}
-                          onChange={(e) => setClaimInput(e.target.value)}
+                          onChange={(e) => {
+                            setClaimInput(e.target.value);
+                            if (currentResult) setCurrentResult(null);
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                               e.preventDefault();
@@ -804,6 +811,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                           </div>
 
                           <button
+                            id="verify-claim-button"
                             onClick={() => handleVerify()}
                             disabled={verifying}
                             className="px-6 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
@@ -835,23 +843,23 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 e.preventDefault();
-                                handleVerifyUrl();
+                                handleExtractUrl();
                               }
                             }}
                             placeholder="https://www.reuters.com/world/... or https://apnews.com/..."
                             className="flex-1 bg-dark-950 rounded-xl px-4 py-3 text-zinc-100 placeholder-zinc-500 border border-zinc-800 focus:outline-none focus:border-zinc-500 text-sm font-mono"
                           />
                           <button
-                            onClick={handleVerifyUrl}
+                            onClick={handleExtractUrl}
                             disabled={extractingUrl || verifying}
                             className="px-5 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
                           >
                             <Icon name="link" className="w-4 h-4" />
-                            <span>{extractingUrl ? 'Extracting...' : 'Extract & Verify'}</span>
+                            <span>{extractingUrl ? 'Extracting...' : 'Extract Headline'}</span>
                           </button>
                         </div>
                         <p className="text-xs text-zinc-500">
-                          TruthLens will parse the online web article, extract the reported statement, and match it against the evidence vault.
+                          TruthLens will parse the online web article and load the headline into the editor for you to review and verify.
                         </p>
                       </div>
                     )}
@@ -868,12 +876,12 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                         />
                         <div className="flex justify-end">
                           <button
-                            onClick={handleVerifyForward}
+                            onClick={handleCleanForward}
                             disabled={cleaningForward || verifying}
                             className="px-6 py-2.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-semibold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
                           >
                             <Icon name="message" className="w-4 h-4" />
-                            <span>{cleaningForward ? 'Cleaning...' : 'Clean & Verify Forward'}</span>
+                            <span>{cleaningForward ? 'Cleaning...' : 'Clean & Load Claim'}</span>
                           </button>
                         </div>
                       </div>
@@ -881,7 +889,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
 
                   </div>
 
-                  {/* Suggestion Benchmarks */}
+                  {/* Suggestion Benchmarks (Populate only, without auto-verifying) */}
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
                     <span className="text-zinc-500 font-mono">Try benchmark:</span>
                     {exampleClaims.map((claim, idx) => (
@@ -890,7 +898,10 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                         onClick={() => {
                           setClaimInput(claim);
                           setInputMode('text');
-                          handleVerify(claim);
+                          setCurrentResult(null);
+                          showToast('Claim loaded into editor. Click "Verify Claim" to audit.', 'info');
+                          const el = document.getElementById('claim-editor');
+                          if (el) el.focus();
                         }}
                         className="px-2.5 py-1 rounded-lg bg-dark-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-700 transition-colors text-left"
                       >
@@ -900,7 +911,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                   </div>
                 </div>
 
-                {/* Progress Animation */}
+                {/* Progress Animation (Only visible during verification) */}
                 {verifying && (
                   <div className="max-w-3xl mx-auto glass-card rounded-2xl p-5 border-zinc-700 animate-pulse">
                     <div className="flex items-center gap-2 text-xs font-mono font-semibold text-zinc-300 uppercase tracking-wider mb-3">
@@ -931,7 +942,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                   </div>
                 )}
 
-                {/* RESULTS PRESENTATION */}
+                {/* RESULTS PRESENTATION (Only shown after user clicks "Verify Claim") */}
                 {currentResult && !verifying && (
                   <div className="max-w-4xl mx-auto space-y-6 pt-2">
                     
@@ -1150,7 +1161,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                         Today's Trending News & Viral Rumors
                       </h2>
                       <p className="text-xs text-zinc-400 mt-0.5">
-                        Live 24h feed of active news stories and circulating claims. Click to verify in 1 click.
+                        Live 24h feed of active news stories. Click to load into the verifier.
                       </p>
                     </div>
 
@@ -1208,13 +1219,16 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                               onClick={() => {
                                 setClaimInput(item.claim);
                                 setInputMode('text');
-                                handleVerify(item.claim);
-                                window.scrollTo({ top: 300, behavior: 'smooth' });
+                                setCurrentResult(null);
+                                window.scrollTo({ top: 180, behavior: 'smooth' });
+                                showToast('Loaded story into editor. Click "Verify Claim" to audit.', 'info');
+                                const el = document.getElementById('claim-editor');
+                                if (el) el.focus();
                               }}
                               className="px-3 py-1 rounded-lg bg-zinc-850 hover:bg-white text-zinc-300 hover:text-black border border-zinc-750 hover:border-white text-xs font-semibold flex items-center gap-1.5 transition-all"
                             >
-                              <Icon name="zap" className="w-3 h-3" />
-                              <span>Verify Claim</span>
+                              <Icon name="arrow-right" className="w-3 h-3" />
+                              <span>Load into Editor</span>
                             </button>
                           </div>
                         </div>
@@ -1264,7 +1278,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     <button
                       onClick={handleSeed}
                       disabled={seeding}
-                      className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white border border-zinc-800 font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
+                      className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-855 text-zinc-400 hover:text-white border border-zinc-800 font-semibold flex items-center gap-2 transition-all disabled:opacity-50"
                     >
                       <Icon name="sparkles" className="w-3.5 h-3.5" />
                       <span>{seeding ? 'Seeding...' : 'Load Curated Dossiers'}</span>
@@ -1432,11 +1446,14 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                                   onClick={() => {
                                     setClaimInput(h.claim);
                                     setActiveTab('verify');
-                                    handleVerify(h.claim);
+                                    setCurrentResult(null);
+                                    showToast('Loaded audit into editor. Click "Verify Claim" to audit.', 'info');
+                                    const el = document.getElementById('claim-editor');
+                                    if (el) el.focus();
                                   }}
                                   className="px-2.5 py-1 rounded-lg bg-zinc-850 hover:bg-white text-zinc-300 hover:text-black text-xs font-semibold transition-all"
                                 >
-                                  Re-verify
+                                  Load
                                 </button>
                               </td>
                             </tr>
