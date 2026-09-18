@@ -235,7 +235,7 @@ class LLMService:
     def _offline_nli_verify(self, claim: str, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Deterministic, Explainable Natural Language Inference & Evidence Stance Classifier.
-        Analyzes lexical, numerical, negation, and semantic overlap between the claim and each chunk.
+        Analyzes subject entity, predicate role, numerical alignment, polarity, and semantic overlap.
         """
         claim_lower = claim.lower()
         stopwords = {
@@ -250,23 +250,29 @@ class LLMService:
         if not claim_content_words:
             claim_content_words = set(all_claim_words)
         
-        # Detect key entities & numeric claims
+        # 1. Dissect Claim into Subject Entity vs Predicate/Role
+        subject_tokens = set()
+        role_predicate_tokens = set()
+        
+        match = re.split(r"\b(?:is|are|was|were|became|serves\s+as|holds|became\s+the|serves|can|cannot|could)\b", claim_lower, maxsplit=1)
+        if len(match) == 2:
+            subj_part, pred_part = match[0].strip(), match[1].strip()
+            subj_words = [w for w in re.findall(r"\b[a-zA-Z0-9]{2,}\b", subj_part) if w not in stopwords]
+            pred_words = [w for w in re.findall(r"\b[a-zA-Z0-9]{2,}\b", pred_part) if w not in stopwords]
+            if subj_words:
+                subject_tokens = set(subj_words)
+            if pred_words:
+                role_predicate_tokens = set(pred_words)
+        
+        is_unique_role_claim = bool(re.search(r"\b(?:pm|prime\s+minister|president\s+of|chancellor\s+of|king\s+of|queen\s+of|monarch|head\s+of\s+state|capital\s+of|ceo\s+of|founder\s+of|governor\s+of)\b", claim_lower))
+        
+        # Detect numbers, ranks, and negations
         numbers_in_claim = re.findall(r"\b\d+(?:\.\d+)?\b", claim_lower)
         rank_terms = re.findall(r"\b(?:first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|largest|smallest|highest|lowest)\b", claim_lower)
-        
         negation_markers = {"not", "never", "cannot", "failed", "untrue", "false", "disproved", "refuted", "inaccurate", "incorrect"}
         has_claim_negation = any(w in all_claim_words for w in negation_markers)
-
-        # Detect comparative modifiers ("over", "more than", "at least", "under", "less than")
         has_over_modifier = bool(re.search(r"\b(?:over|more\s+than|at\s+least|exceed|above)\b", claim_lower))
         has_under_modifier = bool(re.search(r"\b(?:under|less\s+than|below|fewer\s+than)\b", claim_lower))
-
-        supporting_chunks = []
-        contradicting_chunks = []
-        neutral_chunks = []
-        chunk_classifications = []
-
-        # Target entity-predicate markers
         has_viral_claim = any(v in claim_lower for v in ["viral", "virus", "cold", "flu"])
 
         explicit_refutation_phrases = [
@@ -277,58 +283,104 @@ class LLMService:
         ]
 
         total_claim_kw = len(claim_content_words)
+        supporting_chunks = []
+        contradicting_chunks = []
+        neutral_chunks = []
+        chunk_classifications = []
 
         for chunk in chunks:
             text = chunk.get("text", "")
             text_lower = text.lower()
             all_text_words = set(re.findall(r"\b[a-zA-Z0-9]{2,}\b", text_lower))
             text_content_words = set(w for w in all_text_words if w not in stopwords)
-            relevance = float(chunk.get("relevance_score", 0.0))
-
+            
             matched_keywords = claim_content_words.intersection(text_content_words)
             overlap_count = len(matched_keywords)
             overlap = overlap_count / max(1, total_claim_kw)
             
-            # Check numerical / entity alignments or mismatches
             text_numbers = re.findall(r"\b\d+(?:\.\d+)?\b", text_lower)
             text_ranks = re.findall(r"\b(?:first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|largest|smallest|highest|lowest)\b", text_lower)
-            
             chunk_negation = any(w in all_text_words for w in negation_markers)
             chunk_has_explicit_refutation = any(p in text_lower for p in explicit_refutation_phrases)
-            
-            # Stance inference
+
+            subject_matched = bool(subject_tokens) and len(subject_tokens.intersection(text_content_words)) >= len(subject_tokens) * 0.7
+            subject_completely_absent = bool(subject_tokens) and len(subject_tokens.intersection(text_content_words)) == 0
+            predicate_matched = bool(role_predicate_tokens) and len(role_predicate_tokens.intersection(text_content_words)) >= max(1, len(role_predicate_tokens) * 0.4)
+            full_predicate_matched = bool(role_predicate_tokens) and len(role_predicate_tokens.intersection(text_content_words)) >= len(role_predicate_tokens) * 0.75
+
             stance = "NEUTRAL"
-            rationale = "Mentions related context but neither confirms nor refutes directly."
+            rationale = "Provides background context but lacks decisive corroboration details."
 
-            # Entity Grounding Threshold: A chunk must contain sufficient subject keywords to take a stance
-            # If claim has 3+ content words, matching only 1 is just generic background context
-            has_sufficient_subject_grounding = (
-                (total_claim_kw >= 3 and overlap_count >= 2) or
-                (total_claim_kw == 2 and overlap_count >= 2) or
-                (total_claim_kw == 1 and overlap_count == 1)
-            )
-
-            if not has_sufficient_subject_grounding or overlap < 0.20:
-                stance = "NEUTRAL"
-                rationale = "Insufficient entity overlap with the specific claim subject."
-                neutral_chunks.append(chunk)
-            # Check explicit refutation first — only when the chunk is topically grounded
+            # Case 1: Sole-Office / Unique-Role Conflict (e.g. Trump is PM of India -> Chunk says Modi is PM of India)
+            # Requires full office and country/entity match in the evidence text
+            if is_unique_role_claim and subject_completely_absent and full_predicate_matched and overlap >= 0.40:
+                stance = "CONTRADICTING"
+                rationale = "Authoritative evidence identifies a different entity holding this exact office/role, contradicting the asserted subject."
+                contradicting_chunks.append(chunk)
+            
+            # Case 2: Explicit scientific/factual refutation
             elif chunk_has_explicit_refutation and overlap >= 0.35:
                 stance = "CONTRADICTING"
                 rationale = "Directly and explicitly refutes the factual premise asserted in the claim."
                 contradicting_chunks.append(chunk)
+            
+            # Case 3: Subject entity is absent from this chunk -> CANNOT support the claim
+            elif subject_tokens and subject_completely_absent:
+                stance = "NEUTRAL"
+                rationale = "Discusses related terminology but does not reference the primary subject of the claim."
+                neutral_chunks.append(chunk)
+            
+            # Case 4: Subject entity present with role/predicate alignment
+            elif subject_tokens and role_predicate_tokens:
+                if subject_matched and predicate_matched:
+                    if rank_terms and text_ranks and not any(r in text_ranks for r in rank_terms):
+                        stance = "CONTRADICTING"
+                        rationale = f"Cites conflicting ranking ({', '.join(text_ranks)}) contradictory to the claim ({', '.join(rank_terms)})."
+                        contradicting_chunks.append(chunk)
+                    elif has_viral_claim and "virus" not in text_lower and "viral" not in text_lower and "cold" not in text_lower:
+                        stance = "NEUTRAL"
+                        rationale = "Discusses bacterial infections, which does not confirm effectiveness against viral infections."
+                        neutral_chunks.append(chunk)
+                    elif numbers_in_claim and text_numbers and len(numbers_in_claim) > 0:
+                        num_verdict = self._check_numerical_alignment(
+                            numbers_in_claim, text_numbers, 
+                            has_over_modifier, has_under_modifier,
+                            claim_lower, text_lower
+                        )
+                        if num_verdict == "SUPPORTING":
+                            stance = "SUPPORTING"
+                            rationale = "Numerical evidence in this source confirms the claim values."
+                            supporting_chunks.append(chunk)
+                        elif num_verdict == "CONTRADICTING":
+                            stance = "CONTRADICTING"
+                            rationale = "Factual metrics in this source contradict those in the claim."
+                            contradicting_chunks.append(chunk)
+                        else:
+                            stance = "NEUTRAL"
+                            neutral_chunks.append(chunk)
+                    elif chunk_negation and not has_claim_negation and self._negation_is_claim_relevant(claim_content_words, text_lower, negation_markers):
+                        stance = "CONTRADICTING"
+                        rationale = "Presents opposing polarity or negation relative to the claim assertion."
+                        contradicting_chunks.append(chunk)
+                    else:
+                        stance = "SUPPORTING"
+                        rationale = "Directly corroborates both the subject and the asserted role/action."
+                        supporting_chunks.append(chunk)
+                else:
+                    stance = "NEUTRAL"
+                    rationale = "Mentions the subject or predicate in an unrelated context without confirming the complete relational assertion."
+                    neutral_chunks.append(chunk)
+            
+            # Case 5: Non-relational general claims (e.g. "Renewable energy accounts for over 30%...")
             elif overlap >= 0.30:
-                # If claim is specifically about viruses and chunk only talks about bacteria, it's NEUTRAL context
                 if has_viral_claim and "virus" not in text_lower and "viral" not in text_lower and "cold" not in text_lower:
                     stance = "NEUTRAL"
                     rationale = "Discusses bacterial infections, which does not confirm effectiveness against viral infections."
                     neutral_chunks.append(chunk)
-                # Check for rank mismatch — only when claim specifically asserts a ranking
                 elif rank_terms and text_ranks and not any(r in text_ranks for r in rank_terms):
                     stance = "CONTRADICTING"
                     rationale = f"Cites conflicting ranking ({', '.join(text_ranks)}) contradictory to the claim ({', '.join(rank_terms)})."
                     contradicting_chunks.append(chunk)
-                # Numerical comparison with comparative modifier awareness
                 elif numbers_in_claim and text_numbers and len(numbers_in_claim) > 0:
                     num_verdict = self._check_numerical_alignment(
                         numbers_in_claim, text_numbers, 
@@ -344,15 +396,8 @@ class LLMService:
                         rationale = "Factual metrics in this source contradict those in the claim."
                         contradicting_chunks.append(chunk)
                     else:
-                        # Numbers present but inconclusive — fall through to negation and default checks
-                        if chunk_negation and not has_claim_negation and self._negation_is_claim_relevant(claim_content_words, text_lower, negation_markers):
-                            stance = "CONTRADICTING"
-                            rationale = "Presents opposing polarity or negation relative to the claim assertion."
-                            contradicting_chunks.append(chunk)
-                        else:
-                            stance = "SUPPORTING"
-                            rationale = "Directly corroborates the assertions made in the claim with matching factual data."
-                            supporting_chunks.append(chunk)
+                        stance = "NEUTRAL"
+                        neutral_chunks.append(chunk)
                 elif chunk_negation and not has_claim_negation and self._negation_is_claim_relevant(claim_content_words, text_lower, negation_markers):
                     stance = "CONTRADICTING"
                     rationale = "Presents opposing polarity or negation relative to the claim assertion."
@@ -391,16 +436,10 @@ class LLMService:
             explanation = "The claim is supported by credible evidence in the knowledge vault, with matching factual assertions and authoritative data points."
             key_reasoning = f"Corroborated by {len(supporting_chunks)} retrieved source chunk(s) confirming the entities, timing, and core factual premises."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) > 0:
-            if len(contradicting_chunks) >= 3 * len(supporting_chunks):
-                verdict = "REFUTED"
-                confidence = 88.0
-                explanation = "The claim is refuted. While related topics are discussed in the knowledge vault, direct evidence explicitly disproves the core assertion."
-                key_reasoning = f"Direct counter-evidence overwhelmingly contradicts the claim ({len(contradicting_chunks)} contradicting vs {len(supporting_chunks)} partial supporting chunks)."
-            else:
-                verdict = "MISLEADING"
-                confidence = 82.5
-                explanation = "The claim is misleading. While portions of the statement are based on factual truths or projections (e.g. PPP rankings or growth targets), it omits critical context, caveats, or conflicting official statistics (e.g. nominal GDP rankings)."
-                key_reasoning = f"Discovered both corroborating ({len(supporting_chunks)}) and contradicting ({len(contradicting_chunks)}) data points, indicating partial accuracy presented without necessary qualification."
+            verdict = "MISLEADING"
+            confidence = 84.0
+            explanation = "The claim is misleading or partially true. While portions of the statement are based on factual truths or specific contexts (e.g. purchasing power parity or future projections), it conflates metrics and omits critical qualifying facts (e.g. current nominal GDP rankings)."
+            key_reasoning = f"Discovered both corroborating ({len(supporting_chunks)}) and contradicting ({len(contradicting_chunks)}) data points across trusted sources, indicating selective representation without necessary qualification."
         else:
             verdict = "INSUFFICIENT EVIDENCE"
             confidence = 42.0

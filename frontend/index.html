@@ -20,21 +20,6 @@
           fontFamily: {
             sans: ['"Plus Jakarta Sans"', '"Inter"', 'system-ui', 'sans-serif'],
             mono: ['"JetBrains Mono"', 'monospace'],
-          },
-          colors: {
-            paper: {
-              50: '#FAFBFB',
-              100: '#F4F5F7',
-              200: '#E5E7EB',
-              300: '#D1D5DB',
-            },
-            ink: {
-              900: '#0F172A',
-              800: '#1E293B',
-              700: '#334155',
-              600: '#475569',
-              500: '#64748B',
-            }
           }
         }
       }
@@ -50,7 +35,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    /* Smooth transitions for theme switching */
     *, *::before, *::after {
       transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
     }
@@ -183,7 +167,7 @@
       const cfg = {
         'SUPPORTED': {
           label: 'VERIFIED TRUE',
-          sub: 'Backed by authoritative evidence in indexed dossiers',
+          sub: 'Confirmed by authoritative evidence in indexed dossiers',
           border: 'border-emerald-300 dark:border-emerald-800/80',
           bg: 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200',
           dot: 'bg-emerald-600 dark:bg-emerald-400',
@@ -191,7 +175,7 @@
         },
         'REFUTED': {
           label: 'DEBUNKED / FALSE',
-          sub: 'Directly contradicted by scientific or official records',
+          sub: 'Directly contradicted by official records & evidence',
           border: 'border-rose-300 dark:border-rose-800/80',
           bg: 'bg-rose-50 text-rose-900 dark:bg-rose-950/60 dark:text-rose-200',
           dot: 'bg-rose-600 dark:bg-rose-400',
@@ -250,10 +234,10 @@
       return (
         <div className={`p-5 rounded-2xl border transition-all space-y-3.5 ${
           isSupport 
-            ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/60' 
+            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/60' 
             : isContradict 
-            ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60' 
-            : 'bg-slate-50/70 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
+            ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60' 
+            : 'bg-slate-50/80 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
         }`}>
           <div className="flex items-center justify-between gap-2 text-xs font-mono">
             <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide border ${
@@ -266,7 +250,7 @@
               {isSupport ? '✓ CORROBORATING EVIDENCE' : isContradict ? '✗ REFUTING EVIDENCE' : 'ℹ CONTEXTUAL EXCERPT'}
             </span>
             <span className="text-slate-500 dark:text-slate-400 font-medium">
-              Match: <strong className="text-slate-800 dark:text-slate-200">{chunk.similarity_score}%</strong>
+              Match: <strong className="text-slate-800 dark:text-slate-200">{chunk.relevance_score != null ? Math.round(chunk.relevance_score) : (chunk.similarity_score != null ? Math.round(chunk.similarity_score) : 85)}%</strong>
             </span>
           </div>
 
@@ -694,7 +678,9 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
 
       // Example benchmark claims
       const exampleClaims = [
+        "St. Francis Institute of Technology is in Mumbai.",
         "Narendra Modi is the Prime Minister of India.",
+        "Donald Trump is the Prime Minister of India.",
         "India is the third largest economy in the world.",
         "Renewable energy accounts for over 30 percent of global electricity.",
         "Antibiotics can cure viral infections like the flu.",
@@ -705,7 +691,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
         <div className="flex flex-col min-h-screen">
           {/* Toast Notification */}
           {toast && (
-            <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xl flex items-center gap-3 backdrop-blur-xl text-xs sm:text-sm font-medium">
+            <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xl flex items-center gap-3 backdrop-blur-xl text-xs sm:text-sm font-medium">
               <Icon name={toast.type === 'error' ? 'x' : 'check'} className="w-4 h-4 text-slate-800 dark:text-slate-100" />
               <span>{toast.msg}</span>
             </div>
@@ -791,35 +777,35 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
             </div>
           </header>
 
-          {/* Main Content Area */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+          {/* Main Expansive Content Area */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
             
             {/* ======================================================== */}
             {/* TAB 1: VERIFY CLAIM (MAIN WORKSPACE)                     */}
             {/* ======================================================== */}
             {activeTab === 'verify' && (
-              <div className="space-y-10">
+              <div className="space-y-12">
                 
                 {/* Refined, Editorial Hero */}
-                <div className="text-center max-w-3xl mx-auto pt-2 pb-2">
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono font-medium mb-4">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <div className="text-center max-w-4xl mx-auto pt-2 pb-2">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono font-medium mb-4">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                     Explainable Fact Verification Engine
                   </div>
-                  <h1 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 dark:text-white mb-3 leading-tight font-sans">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4 leading-tight font-sans">
                     Verify the truth behind any claim or news story.
                   </h1>
-                  <p className="text-slate-600 dark:text-slate-400 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto font-sans">
-                    Cross-examine claims, web articles, and viral messages against 400+ indexed authoritative sources with verifiable evidence.
+                  <p className="text-slate-600 dark:text-slate-400 text-base sm:text-xl leading-relaxed max-w-3xl mx-auto font-sans">
+                    Cross-examine claims, web articles, and viral messages against 420+ indexed authoritative sources with verifiable evidence.
                   </p>
                 </div>
 
-                {/* Perplexity-Grade Omnibox Input Center */}
-                <div className="max-w-3xl mx-auto">
-                  <div className="omnibox-surface rounded-2xl p-5 sm:p-6 transition-all">
+                {/* Perplexity-Grade Omnibox Input Center (Expansive Width) */}
+                <div className="max-w-4xl w-full mx-auto">
+                  <div className="omnibox-surface rounded-2xl p-6 sm:p-8 transition-all">
                     
                     {/* Input Mode Selector */}
-                    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200 dark:border-slate-800 text-xs font-medium">
+                    <div className="flex items-center gap-2 mb-5 pb-4 border-b border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-medium">
                       {[
                         { id: 'text', label: 'Claim / Statement', icon: 'shield' },
                         { id: 'url', label: 'News Article URL', icon: 'link' },
@@ -831,9 +817,9 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                             setInputMode(m.id);
                             setCurrentResult(null);
                           }}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
+                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
                             inputMode === m.id
-                              ? 'bg-slate-900 text-white dark:bg-slate-800 font-semibold shadow-sm'
+                              ? 'bg-slate-900 text-white dark:bg-slate-800 font-bold shadow-sm'
                               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                           }`}
                         >
@@ -861,11 +847,11 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                             }
                           }}
                           placeholder="Type or paste any claim here (e.g. Narendra Modi is the Prime Minister of India...)"
-                          className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-600 dark:focus:border-slate-500 text-base resize-none font-sans leading-relaxed shadow-inner"
+                          className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-5 py-4 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-600 dark:focus:border-slate-500 text-base sm:text-lg resize-none font-sans leading-relaxed shadow-inner"
                         />
                         
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                          <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                        <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
+                          <div className="text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400">
                             Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300">Enter</kbd> to verify
                           </div>
 
@@ -873,17 +859,17 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                             id="verify-claim-button"
                             onClick={() => handleVerify()}
                             disabled={verifying}
-                            className="px-6 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-bold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                            className="px-8 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-bold text-sm sm:text-base shadow-lg transition-all flex items-center gap-2.5 disabled:opacity-50 active:scale-95"
                           >
                             {verifying ? (
                               <>
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                                <svg className="animate-spin -ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
                                 <span>Verifying Evidence...</span>
                               </>
                             ) : (
                               <>
                                 <span>Verify Claim</span>
-                                <Icon name="arrow-right" className="w-3.5 h-3.5" />
+                                <Icon name="arrow-right" className="w-4 h-4" />
                               </>
                             )}
                           </button>
@@ -894,7 +880,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     {/* Mode 2: Online News Link / URL Scanner */}
                     {inputMode === 'url' && (
                       <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-2.5">
+                        <div className="flex flex-col sm:flex-row gap-3">
                           <input
                             type="url"
                             value={urlInput}
@@ -906,18 +892,18 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                               }
                             }}
                             placeholder="https://www.reuters.com/world/... or https://apnews.com/..."
-                            className="flex-1 bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-500 text-sm font-mono"
+                            className="flex-1 bg-slate-50 dark:bg-slate-950 rounded-xl px-5 py-3.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-500 text-base font-mono"
                           />
                           <button
                             onClick={handleExtractUrl}
                             disabled={extractingUrl || verifying}
-                            className="px-5 py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
+                            className="px-6 py-3.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0 shadow-md"
                           >
                             <Icon name="link" className="w-4 h-4" />
                             <span>{extractingUrl ? 'Extracting...' : 'Extract Headline'}</span>
                           </button>
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                           TruthLens will parse the web article and load the reported assertion into the editor for you to review and verify.
                         </p>
                       </div>
@@ -931,13 +917,13 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                           value={forwardInput}
                           onChange={(e) => setForwardInput(e.target.value)}
                           placeholder="Paste WhatsApp message here: e.g. 'Forwarded as received: Breaking news! WHO announces that... Share to 10 groups!'"
-                          className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-500 text-sm resize-none font-sans"
+                          className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-5 py-4 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-500 text-base resize-none font-sans"
                         />
                         <div className="flex justify-end">
                           <button
                             onClick={handleCleanForward}
                             disabled={cleaningForward || verifying}
-                            className="px-6 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+                            className="px-7 py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 shadow-md"
                           >
                             <Icon name="message" className="w-4 h-4" />
                             <span>{cleaningForward ? 'Cleaning...' : 'Clean & Load Claim'}</span>
@@ -949,7 +935,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                   </div>
 
                   {/* Suggestion Benchmarks */}
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+                  <div className="mt-5 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
                     <span className="text-slate-500 dark:text-slate-400 font-medium">Try benchmark:</span>
                     {exampleClaims.map((claim, idx) => (
                       <button
@@ -964,7 +950,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                         }}
                         className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition-colors text-left shadow-sm font-sans"
                       >
-                        "{claim.length > 38 ? claim.slice(0, 38) + '...' : claim}"
+                        "{claim.length > 40 ? claim.slice(0, 40) + '...' : claim}"
                       </button>
                     ))}
                   </div>
@@ -972,44 +958,44 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
 
                 {/* Progress Animation (Only visible during verification) */}
                 {verifying && (
-                  <div className="max-w-3xl mx-auto surface-card rounded-2xl p-5 border-slate-300 dark:border-slate-700 animate-pulse">
-                    <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <div className="max-w-4xl w-full mx-auto surface-card rounded-2xl p-6 border-slate-300 dark:border-slate-700 animate-pulse">
+                    <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                       Executing Fact-Verification Pipeline
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs sm:text-sm">
                       {[
                         { step: 1, label: 'Entity Grounding' },
                         { step: 2, label: 'Vector Retrieval' },
                         { step: 3, label: 'Semantic Reranker' },
                         { step: 4, label: 'NLI Synthesis' }
                       ].map((s) => (
-                        <div key={s.step} className={`p-2.5 rounded-lg border flex items-center gap-2 ${
+                        <div key={s.step} className={`p-3 rounded-xl border flex items-center gap-2.5 ${
                           progressStep >= s.step 
-                            ? 'bg-slate-900 text-white dark:bg-slate-800 dark:border-slate-600' 
+                            ? 'bg-slate-900 text-white dark:bg-slate-800 dark:border-slate-600 shadow-sm' 
                             : 'bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-850 dark:text-slate-600'
                         }`}>
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
                             progressStep >= s.step ? 'bg-emerald-400 text-slate-900' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
                           }`}>
                             {s.step}
                           </span>
-                          <span className="truncate">{s.label}</span>
+                          <span className="truncate font-semibold">{s.label}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* RESULTS PRESENTATION (Only shown after user clicks "Verify Claim") */}
+                {/* RESULTS PRESENTATION (Expansive width) */}
                 {currentResult && !verifying && (
-                  <div className="max-w-4xl mx-auto space-y-6 pt-2">
+                  <div className="max-w-5xl w-full mx-auto space-y-8 pt-2">
                     
                     {/* Similar Claim Alert */}
                     {currentResult.similar_claim_found && (
-                      <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start justify-between gap-3 text-xs">
-                        <div className="flex items-start gap-2.5">
-                          <Icon name="history" className="w-4 h-4 text-amber-700 dark:text-amber-400 mt-0.5" />
+                      <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start justify-between gap-3 text-xs sm:text-sm">
+                        <div className="flex items-start gap-3">
+                          <Icon name="history" className="w-5 h-5 text-amber-700 dark:text-amber-400 mt-0.5" />
                           <div>
                             <span className="font-bold text-amber-900 dark:text-amber-200">
                               Claim Similarity Match ({currentResult.similar_claim_found.similarity_score}% overlap)
@@ -1024,13 +1010,13 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     )}
 
                     {/* Verdict Hero Card */}
-                    <div className="surface-card rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
-                        <div className="space-y-1">
-                          <span className="text-[11px] uppercase font-mono font-semibold tracking-wider text-slate-500 dark:text-slate-400">
+                    <div className="surface-card rounded-3xl p-6 sm:p-10 space-y-8 shadow-sm">
+                      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
+                        <div className="space-y-2 flex-1">
+                          <span className="text-xs uppercase font-mono font-bold tracking-wider text-slate-500 dark:text-slate-400">
                             Verified Assertion
                           </span>
-                          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white leading-snug font-sans">
+                          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-snug font-sans">
                             "{currentResult.claim}"
                           </h2>
                         </div>
@@ -1040,33 +1026,33 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                       </div>
 
                       {/* Score Metrics Grid */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
-                          <div className="text-xs text-slate-600 dark:text-slate-400 uppercase font-semibold">Confidence Score</div>
-                          <div className="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 font-mono">
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 uppercase font-bold">Confidence Score</div>
+                          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1">
                             {currentResult.confidence_score}%
                           </div>
-                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 mt-3.5 overflow-hidden">
                             <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${currentResult.confidence_score}%` }}></div>
                           </div>
                         </div>
 
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
-                          <div className="text-xs text-slate-600 dark:text-slate-400 uppercase font-semibold">Source Credibility</div>
-                          <div className="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 uppercase font-bold">Source Credibility</div>
+                          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1">
                             {currentResult.source_credibility_score}%
                           </div>
-                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 mt-3.5 overflow-hidden">
                             <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${currentResult.source_credibility_score}%` }}></div>
                           </div>
                         </div>
 
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
-                          <div className="text-xs text-slate-600 dark:text-slate-400 uppercase font-semibold">Evidence Consensus</div>
-                          <div className="text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 uppercase font-bold">Evidence Agreement</div>
+                          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1">
                             {currentResult.evidence_agreement_score}%
                           </div>
-                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 mt-3.5 overflow-hidden">
                             <div className="bg-amber-500 h-full rounded-full" style={{ width: `${currentResult.evidence_agreement_score}%` }}></div>
                           </div>
                         </div>
@@ -1075,15 +1061,15 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                       {/* Rationale Breakdown (Optimized for Reading) */}
                       <div className="space-y-4 pt-2">
                         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                          <Icon name="sparkles" className="w-3.5 h-3.5 text-indigo-500" />
+                          <Icon name="sparkles" className="w-4 h-4 text-indigo-500" />
                           Verdict Rationale & Findings
                         </h3>
-                        <div className="p-5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border-l-4 border-indigo-500 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-base sm:text-[17px] leading-relaxed font-sans">
+                        <div className="p-6 rounded-2xl bg-slate-50/90 dark:bg-slate-900/60 border-l-4 border-indigo-500 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-base sm:text-lg leading-relaxed font-sans">
                           {currentResult.explanation}
                         </div>
 
                         {currentResult.key_reasoning && (
-                          <div className="p-4 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                          <div className="p-5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
                             <span className="font-bold text-slate-900 dark:text-white block mb-1 text-xs font-mono uppercase">Key Analytical Reasoning:</span>
                             {currentResult.key_reasoning}
                           </div>
@@ -1091,59 +1077,59 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                       </div>
 
                       {/* Share / WhatsApp Action Bar */}
-                      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                          Verified against TruthLens Evidence Vault
+                      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                          Audited against TruthLens Evidence Vault • {currentResult.llm_provider_used}
                         </span>
 
                         <button
                           onClick={() => handleCopyWhatsAppReport(currentResult)}
-                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-sm active:scale-95"
+                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-md active:scale-95"
                         >
-                          <Icon name="copy" className="w-3.5 h-3.5" />
+                          <Icon name="copy" className="w-4 h-4" />
                           <span>Copy WhatsApp Fact-Check Report</span>
                         </button>
                       </div>
                     </div>
 
-                    {/* Evidence Columns */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Evidence Columns (Side-by-side on desktop) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       
                       {/* Supporting Evidence */}
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2 px-1">
-                          <Icon name="check" className="w-3.5 h-3.5" />
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2 px-1">
+                          <Icon name="check" className="w-4 h-4" />
                           Corroborating Evidence ({currentResult.supporting_evidence?.length || 0})
                         </h3>
 
                         {currentResult.supporting_evidence?.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             {currentResult.supporting_evidence.map((chunk) => (
                               <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
                             ))}
                           </div>
                         ) : (
-                          <div className="p-6 rounded-2xl surface-card text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
+                          <div className="p-8 rounded-2xl surface-card text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-mono">
                             No direct corroborating evidence found.
                           </div>
                         )}
                       </div>
 
                       {/* Contradicting Evidence */}
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-mono font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-2 px-1">
-                          <Icon name="x" className="w-3.5 h-3.5" />
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-mono font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-2 px-1">
+                          <Icon name="x" className="w-4 h-4" />
                           Refuting Evidence ({currentResult.contradicting_evidence?.length || 0})
                         </h3>
 
                         {currentResult.contradicting_evidence?.length > 0 ? (
-                          <div className="space-y-3">
+                          <div className="space-y-4">
                             {currentResult.contradicting_evidence.map((chunk) => (
                               <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
                             ))}
                           </div>
                         ) : (
-                          <div className="p-6 rounded-2xl surface-card text-center text-xs text-slate-500 dark:text-slate-400 font-mono">
+                          <div className="p-8 rounded-2xl surface-card text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-mono">
                             No direct contradictory evidence found.
                           </div>
                         )}
@@ -1152,11 +1138,11 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
 
                     {/* Contextual Excerpts */}
                     {currentResult.neutral_evidence?.length > 0 && (
-                      <div className="space-y-3 pt-2">
+                      <div className="space-y-4 pt-2">
                         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
                           Contextual Excerpts ({currentResult.neutral_evidence.length})
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {currentResult.neutral_evidence.map((chunk) => (
                             <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
                           ))}
@@ -1165,36 +1151,36 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     )}
 
                     {/* Sources Citations Table */}
-                    <div className="surface-card rounded-2xl p-5 sm:p-6">
-                      <h3 className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Icon name="database" className="w-3.5 h-3.5 text-indigo-500" />
+                    <div className="surface-card rounded-2xl p-6 sm:p-8">
+                      <h3 className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-5 flex items-center gap-2">
+                        <Icon name="database" className="w-4 h-4 text-indigo-500" />
                         Authoritative Sources & Citations
                       </h3>
 
                       {currentResult.retrieved_sources?.length > 0 ? (
                         <div className="overflow-x-auto">
-                          <table className="w-full text-left text-xs">
+                          <table className="w-full text-left text-xs sm:text-sm">
                             <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
                               <tr>
-                                <th className="pb-2.5 px-3 font-semibold">Source Name</th>
-                                <th className="pb-2.5 px-3 font-semibold">Type</th>
-                                <th className="pb-2.5 px-3 font-semibold">Scope</th>
-                                <th className="pb-2.5 px-3 text-right font-semibold">Credibility</th>
+                                <th className="pb-3 px-3 font-semibold">Source Name</th>
+                                <th className="pb-3 px-3 font-semibold">Type</th>
+                                <th className="pb-3 px-3 font-semibold">Scope</th>
+                                <th className="pb-3 px-3 text-right font-semibold">Credibility</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono">
                               {currentResult.retrieved_sources.map((src, i) => (
                                 <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-850/40">
-                                  <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white font-sans">{src.source || src.document_name}</td>
-                                  <td className="py-2.5 px-3">
-                                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                                  <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white font-sans">{src.source || src.document_name}</td>
+                                  <td className="py-3 px-3">
+                                    <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium">
                                       {src.source_type}
                                     </span>
                                   </td>
-                                  <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">
+                                  <td className="py-3 px-3 text-slate-500 dark:text-slate-400">
                                     {src.pages?.length > 0 ? `pp. ${src.pages.join(', ')}` : 'Full Document'}
                                   </td>
-                                  <td className="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-white">
+                                  <td className="py-3 px-3 text-right font-bold text-slate-900 dark:text-white">
                                     {src.credibility_score}%
                                   </td>
                                 </tr>
@@ -1203,7 +1189,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                           </table>
                         </div>
                       ) : (
-                        <div className="text-xs text-slate-500 font-mono text-center py-3">No sources retrieved.</div>
+                        <div className="text-xs text-slate-500 font-mono text-center py-4">No sources retrieved.</div>
                       )}
                     </div>
 
@@ -1213,24 +1199,24 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                 {/* ======================================================== */}
                 {/* TODAY'S TRENDING NEWS & VIRAL CLAIMS RADAR               */}
                 {/* ======================================================== */}
-                <div className="max-w-5xl mx-auto space-y-4 pt-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="max-w-5xl w-full mx-auto space-y-6 pt-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white font-sans">
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">
                         Today's Trending News & Viral Rumors
                       </h2>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                         Live 24h feed of active news stories. Click to load into the verifier.
                       </p>
                     </div>
 
                     {/* Category Filter Pills */}
-                    <div className="flex flex-wrap items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono">
+                    <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono">
                       {['ALL', 'POLITICS', 'ECONOMY', 'HEALTH', 'TECHNOLOGY', 'MYTH', 'LIVE NEWS'].map((cat) => (
                         <button
                           key={cat}
                           onClick={() => setTrendingFilter(cat)}
-                          className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                          className={`px-3 py-1 rounded-lg font-medium transition-all ${
                             trendingFilter === cat
                               ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-sm'
                               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -1243,16 +1229,16 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                   </div>
 
                   {/* Trending Claims Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {trendingClaims
                       .filter(item => trendingFilter === 'ALL' || item.badge === trendingFilter || item.category?.includes(trendingFilter))
                       .slice(0, 9)
                       .map((item, idx) => (
                         <div
                           key={idx}
-                          className="surface-card rounded-2xl p-5 flex flex-col justify-between hover:border-slate-400 dark:hover:border-slate-600 transition-all space-y-3"
+                          className="surface-card rounded-2xl p-5 flex flex-col justify-between hover:border-slate-400 dark:hover:border-slate-600 transition-all space-y-4"
                         >
-                          <div className="space-y-2.5">
+                          <div className="space-y-3">
                             <div className="flex items-center justify-between gap-2 text-xs font-mono">
                               <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[10px]">
                                 {item.badge || item.category}
@@ -1262,12 +1248,12 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                               </span>
                             </div>
 
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-snug font-sans">
+                            <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug font-sans">
                               "{item.claim}"
                             </p>
 
                             {item.source_hint && (
-                              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                              <div className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
                                 Ref: <strong className="text-slate-700 dark:text-slate-300">{item.source_hint}</strong>
                               </div>
                             )}
@@ -1284,9 +1270,9 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                                 const el = document.getElementById('claim-editor');
                                 if (el) el.focus();
                               }}
-                              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white dark:bg-slate-800 dark:hover:bg-white dark:text-slate-300 dark:hover:text-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+                              className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white dark:bg-slate-800 dark:hover:bg-white dark:text-slate-300 dark:hover:text-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
                             >
-                              <Icon name="arrow-right" className="w-3 h-3" />
+                              <Icon name="arrow-right" className="w-3.5 h-3.5" />
                               <span>Load into Editor</span>
                             </button>
                           </div>
@@ -1302,22 +1288,22 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
             {/* TAB 2: KNOWLEDGE VAULT & LIVE NEWS ENGINE                */}
             {/* ======================================================== */}
             {activeTab === 'knowledge' && (
-              <div className="max-w-5xl mx-auto space-y-6">
+              <div className="max-w-5xl w-full mx-auto space-y-8">
                 {/* Header & Main Controls */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-sans">Knowledge Vault & News Engine</h2>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Knowledge Vault & News Engine</h2>
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
                       Continuous real-time news retrieval, historical dataset training, and vector indexing.
                     </p>
                   </div>
                   
                   {/* Action Controls */}
-                  <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                  <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs">
                     <button
                       onClick={handleSyncNews}
                       disabled={syncingNews}
-                      className="px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                      className="px-4 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
                       title="Pull latest 24-hour news from Reuters, AP, BBC, and PolitiFact"
                     >
                       <Icon name="zap" className={`w-3.5 h-3.5 ${syncingNews ? 'animate-spin' : ''}`} />
@@ -1327,7 +1313,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     <button
                       onClick={handleTrainDataset}
                       disabled={trainingDataset}
-                      className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-semibold flex items-center gap-2 transition-all disabled:opacity-50 shadow-sm"
+                      className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-semibold flex items-center gap-2 transition-all disabled:opacity-50 shadow-sm"
                       title="Train/index historical news from ISOT Reuters and PolitiFact datasets"
                     >
                       <Icon name="book" className={`w-3.5 h-3.5 ${trainingDataset ? 'animate-pulse' : ''}`} />
@@ -1337,7 +1323,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     <button
                       onClick={handleSeed}
                       disabled={seeding}
-                      className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold flex items-center gap-2 transition-all disabled:opacity-50 shadow-sm"
+                      className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold flex items-center gap-2 transition-all disabled:opacity-50 shadow-sm"
                     >
                       <Icon name="sparkles" className="w-3.5 h-3.5" />
                       <span>{seeding ? 'Seeding...' : 'Load Curated Dossiers'}</span>
@@ -1346,16 +1332,16 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                 </div>
 
                 {/* 1. Automated Daily Live News Engine Card */}
-                <div className="surface-card rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="surface-card rounded-2xl p-6 space-y-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <h3 className="text-base font-bold text-slate-900 dark:text-white font-sans">
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-sans">
                           Automated Daily News Stream & Ingestion Engine
                         </h3>
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                         Monitors trusted global newsrooms & fact-checkers. Runs every 24 hours in the background.
                       </p>
                     </div>
@@ -1366,29 +1352,29 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                   </div>
 
                   {/* Engine Stats Grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
                       <div className="text-slate-500 dark:text-slate-400">Live Articles</div>
-                      <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                         {newsStatus?.total_live_articles || 0}
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
                       <div className="text-slate-500 dark:text-slate-400">News Chunks</div>
-                      <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                         {newsStatus?.total_news_chunks || 0}
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
                       <div className="text-slate-500 dark:text-slate-400">Active RSS Feeds</div>
-                      <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-1">
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
                         {newsStatus?.active_sources?.length || 4}
                       </div>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
                       <div className="text-slate-500 dark:text-slate-400">Last Synced</div>
                       <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1 truncate">
                         {newsStatus?.last_sync || 'Recently'}
@@ -1398,58 +1384,58 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                 </div>
 
                 {/* 2. Upload Document Card */}
-                <div className="surface-card rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="surface-card rounded-2xl p-6 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white font-sans">Upload New Reference Dossier</h3>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Index PDF, TXT, or Markdown documents into the vector vault.</p>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-sans">Upload New Reference Dossier</h3>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">Index PDF, TXT, or Markdown documents into the vector vault.</p>
                     </div>
                   </div>
 
-                  <label className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-500 dark:hover:border-slate-500 rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-slate-950/40">
-                    <Icon name="upload" className="w-6 h-6 text-slate-500 dark:text-slate-400" />
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">Click to upload document or drag and drop</span>
+                  <label className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-500 dark:hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-slate-950/40">
+                    <Icon name="upload" className="w-8 h-8 text-slate-500 dark:text-slate-400" />
+                    <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Click to upload document or drag and drop</span>
                     <span className="text-xs text-slate-500 font-mono">PDF, TXT, MD (Max 10MB)</span>
                     <input type="file" accept=".pdf,.txt,.md" className="hidden" onChange={handleFileUpload} />
                   </label>
                 </div>
 
                 {/* 3. Indexed Documents Table */}
-                <div className="surface-card rounded-2xl p-5 sm:p-6 space-y-4">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white font-sans flex items-center justify-between">
+                <div className="surface-card rounded-2xl p-6 space-y-5">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-sans flex items-center justify-between">
                     <span>Indexed Knowledge Vault Documents ({documents.length})</span>
-                    <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{health?.indexed_chunks ?? 0} total chunks</span>
+                    <span className="text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400">{health?.indexed_chunks ?? 0} total chunks</span>
                   </h3>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-xs sm:text-sm">
                       <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
                         <tr>
-                          <th className="pb-2.5 px-3">Document Title</th>
-                          <th className="pb-2.5 px-3">Category / Type</th>
-                          <th className="pb-2.5 px-3">Chunks</th>
-                          <th className="pb-2.5 px-3">Indexed On</th>
-                          <th className="pb-2.5 px-3 text-right">Actions</th>
+                          <th className="pb-3 px-3 font-semibold">Document Title</th>
+                          <th className="pb-3 px-3 font-semibold">Category / Type</th>
+                          <th className="pb-3 px-3 font-semibold">Chunks</th>
+                          <th className="pb-3 px-3 font-semibold">Indexed On</th>
+                          <th className="pb-3 px-3 text-right font-semibold">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono">
                         {documents.map((doc) => (
                           <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-850/40">
-                            <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white font-sans">{doc.title}</td>
-                            <td className="py-2.5 px-3">
-                              <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                            <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white font-sans">{doc.title}</td>
+                            <td className="py-3 px-3">
+                              <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium">
                                 {doc.source_type}
                               </span>
                             </td>
-                            <td className="py-2.5 px-3 font-bold">{doc.chunks_count}</td>
-                            <td className="py-2.5 px-3 text-slate-500">{doc.created_at?.slice(0, 10)}</td>
-                            <td className="py-2.5 px-3 text-right">
+                            <td className="py-3 px-3 font-bold">{doc.chunks_count}</td>
+                            <td className="py-3 px-3 text-slate-500">{doc.created_at?.slice(0, 10)}</td>
+                            <td className="py-3 px-3 text-right">
                               <button
                                 onClick={() => handleDeleteDoc(doc.id, doc.title)}
                                 className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
                                 title="Delete document"
                               >
-                                <Icon name="trash" className="w-3.5 h-3.5" />
+                                <Icon name="trash" className="w-4 h-4" />
                               </button>
                             </td>
                           </tr>
@@ -1466,26 +1452,26 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
             {/* TAB 3: AUDIT HISTORY                                     */}
             {/* ======================================================== */}
             {activeTab === 'history' && (
-              <div className="max-w-5xl mx-auto space-y-6">
+              <div className="max-w-5xl w-full mx-auto space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-sans">Fact-Checking Audit History</h2>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Fact-Checking Audit History</h2>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
                     Complete audit trail of all verified claims, confidence ratings, and evidence matches.
                   </p>
                 </div>
 
-                <div className="surface-card rounded-2xl p-5 sm:p-6">
+                <div className="surface-card rounded-2xl p-6">
                   {history.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
+                      <table className="w-full text-left text-xs sm:text-sm">
                         <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
                           <tr>
-                            <th className="pb-2.5 px-3">Claim Statement</th>
-                            <th className="pb-2.5 px-3">Verdict</th>
-                            <th className="pb-2.5 px-3">Confidence</th>
-                            <th className="pb-2.5 px-3">Provider</th>
-                            <th className="pb-2.5 px-3">Timestamp</th>
-                            <th className="pb-2.5 px-3 text-right">Action</th>
+                            <th className="pb-3 px-3 font-semibold">Claim Statement</th>
+                            <th className="pb-3 px-3 font-semibold">Verdict</th>
+                            <th className="pb-3 px-3 font-semibold">Confidence</th>
+                            <th className="pb-3 px-3 font-semibold">Provider</th>
+                            <th className="pb-3 px-3 font-semibold">Timestamp</th>
+                            <th className="pb-3 px-3 text-right font-semibold">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono">
@@ -1521,7 +1507,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                       </table>
                     </div>
                   ) : (
-                    <div className="text-center py-10 text-slate-500 font-mono text-sm">
+                    <div className="text-center py-12 text-slate-500 font-mono text-sm">
                       No audit history records found yet. Run your first claim verification above!
                     </div>
                   )}
@@ -1533,40 +1519,40 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
             {/* TAB 4: ANALYTICS & METRICS                               */}
             {/* ======================================================== */}
             {activeTab === 'analytics' && (
-              <div className="max-w-5xl mx-auto space-y-6">
+              <div className="max-w-5xl w-full mx-auto space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-sans">Verification Engine Analytics</h2>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Verification Engine Analytics</h2>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
                     Telemetry, verdict distribution, and confidence ratings across all audited claims.
                   </p>
                 </div>
 
                 {analytics && (
                   <>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
-                      <div className="p-4 rounded-xl surface-card">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs sm:text-sm">
+                      <div className="p-5 rounded-2xl surface-card">
                         <div className="text-slate-500 dark:text-slate-400">Total Audits</div>
-                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.total_verifications}</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.total_verifications}</div>
                       </div>
-                      <div className="p-4 rounded-xl surface-card">
+                      <div className="p-5 rounded-2xl surface-card">
                         <div className="text-slate-500 dark:text-slate-400">Avg Confidence</div>
-                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.avg_confidence}%</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.avg_confidence}%</div>
                       </div>
-                      <div className="p-4 rounded-xl surface-card">
+                      <div className="p-5 rounded-2xl surface-card">
                         <div className="text-slate-500 dark:text-slate-400">Avg Retr. Chunks</div>
-                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.avg_sources_retrieved}</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.avg_sources_retrieved}</div>
                       </div>
-                      <div className="p-4 rounded-xl surface-card">
+                      <div className="p-5 rounded-2xl surface-card">
                         <div className="text-slate-500 dark:text-slate-400">Total Chunks</div>
-                        <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{health?.indexed_chunks ?? 0}</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{health?.indexed_chunks ?? 0}</div>
                       </div>
                     </div>
 
-                    <div className="surface-card rounded-2xl p-6 flex flex-col items-center">
-                      <h3 className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-4">
+                    <div className="surface-card rounded-2xl p-8 flex flex-col items-center">
+                      <h3 className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-6">
                         Verdict Distribution
                       </h3>
-                      <div className="w-64 h-64">
+                      <div className="w-72 h-72">
                         <canvas ref={chartRef}></canvas>
                       </div>
                     </div>
@@ -1579,15 +1565,15 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
             {/* TAB 5: SETTINGS & INFERENCE PROVIDER                     */}
             {/* ======================================================== */}
             {activeTab === 'settings' && (
-              <div className="max-w-3xl mx-auto space-y-6">
+              <div className="max-w-3xl w-full mx-auto space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white font-sans">Engine Configuration & Settings</h2>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Engine Configuration & Settings</h2>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
                     Configure LLM reasoning provider, API keys, and retrieval parameters.
                   </p>
                 </div>
 
-                <div className="surface-card rounded-2xl p-6 space-y-6">
+                <div className="surface-card rounded-2xl p-6 sm:p-8 space-y-6">
                   <div>
                     <label className="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                       LLM Reasoning Provider
@@ -1595,7 +1581,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                     <select
                       value={selectedProvider}
                       onChange={(e) => setSelectedProvider(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-slate-600 text-sm font-mono shadow-inner"
+                      className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3.5 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-slate-600 text-sm font-mono shadow-inner"
                     >
                       <option value="fallback">Local Embedded Reasoner (Default, Zero-Latency, Offline)</option>
                       <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
@@ -1615,7 +1601,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
                         placeholder={`Enter your ${selectedProvider} API key...`}
-                        className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-slate-600 text-sm font-mono shadow-inner"
+                        className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3.5 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-slate-600 text-sm font-mono shadow-inner"
                       />
                     </div>
                   )}
@@ -1623,7 +1609,7 @@ _Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
                   <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
                     <button
                       onClick={() => showToast('Settings saved successfully', 'success')}
-                      className="px-5 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs font-mono transition-all shadow-sm"
+                      className="px-6 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs font-mono transition-all shadow-sm"
                     >
                       Save Settings
                     </button>

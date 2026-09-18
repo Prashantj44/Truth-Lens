@@ -11,6 +11,7 @@ from backend.models.schemas import (
 from backend.services.retrieval_service import retrieval_service
 from backend.services.reranking_service import reranking_service
 from backend.services.llm_service import llm_service
+from backend.services.live_search_service import live_search_service
 from backend.database.db import (
     save_verification,
     find_most_similar_claim
@@ -63,14 +64,23 @@ class VerificationService:
         # Step 3: Semantic Vector Retrieval (Stage 1)
         candidate_chunks = retrieval_service.retrieve(claim, top_k=RETRIEVAL_TOP_K)
         
+        # Stage 1.5: Dynamic Open Knowledge & Encyclopedia Grounding Fallback
+        # Queries live Wikipedia & verified encyclopedia sources for entities, institutions, and real-world facts
+        try:
+            live_chunks = live_search_service.fetch_live_evidence(claim, max_results=3)
+            if live_chunks:
+                candidate_chunks = live_chunks + candidate_chunks
+        except Exception as e:
+            print(f"[VerificationService] Live search lookup notice: {e}")
+        
         if not candidate_chunks:
             resp_data = {
                 "id": v_id,
                 "claim": claim,
                 "verdict": "INSUFFICIENT EVIDENCE",
-                "confidence_score": 20.0,
-                "explanation": "No relevant evidence chunks could be retrieved for this claim from the existing knowledge base.",
-                "key_reasoning": "Semantic search returned zero matches exceeding the minimum similarity baseline.",
+                "confidence_score": 15.0,
+                "explanation": "No relevant evidence chunks could be retrieved for this claim from the existing knowledge vault or open knowledge repositories.",
+                "key_reasoning": "Semantic search and encyclopedia lookups returned zero matches exceeding the minimum similarity baseline.",
                 "supporting_evidence": [],
                 "contradicting_evidence": [],
                 "neutral_evidence": [],
@@ -150,28 +160,37 @@ class VerificationService:
             else:
                 neutral.append(ev_chunk)
 
-        # Compute Aggregate Source Credibility (0 - 100%)
-        avg_credibility = round((cred_sum / max(1, len(top_chunks))) * 100, 1)
-
-        # Compute Evidence Agreement Score
-        total_eval = len(supporting) + len(contradicting)
-        if total_eval == 0:
-            agreement_score = 50.0
-            agreement_analysis = "Retrieved sources provide neutral background context without direct consensus or dispute."
-        else:
-            # High agreement if all supporting or all contradicting
-            dominant_count = max(len(supporting), len(contradicting))
-            agreement_score = round((dominant_count / total_eval) * 100, 1)
-            if len(supporting) > 0 and len(contradicting) > 0:
-                agreement_analysis = f"Source Disagreement Detected: {len(supporting)} source(s) corroborate aspects of the claim while {len(contradicting)} source(s) register factual contradiction."
-            elif len(supporting) > 0:
-                agreement_analysis = f"High Source Consensus: All {len(supporting)} evaluable source(s) unanimously corroborate the factual premise."
-            else:
-                agreement_analysis = f"High Source Consensus: All {len(contradicting)} evaluable source(s) uniformly refute the claim."
-
         # Insufficient evidence override if confidence is too low or relevance is poor
         final_verdict = llm_result.get("verdict", "INSUFFICIENT EVIDENCE")
         final_confidence = float(llm_result.get("confidence_score", 60.0))
+
+        # Handle zero-evidence or unverified cases cleanly
+        if final_verdict == "INSUFFICIENT EVIDENCE" and len(supporting) == 0 and len(contradicting) == 0:
+            neutral = [n for n in neutral if n.relevance_score >= 20.0]
+            if len(neutral) == 0:
+                avg_credibility = 0.0
+                agreement_score = 0.0
+                agreement_analysis = "No relevant documentation found matching this assertion across verified vaults and open encyclopedias."
+                sources_dict = {}
+            else:
+                avg_credibility = round((cred_sum / max(1, len(top_chunks))) * 100, 1)
+                agreement_score = 50.0
+                agreement_analysis = "Retrieved sources provide general contextual information but lack direct factual confirmation."
+        else:
+            avg_credibility = round((cred_sum / max(1, len(top_chunks))) * 100, 1)
+            total_eval = len(supporting) + len(contradicting)
+            if total_eval == 0:
+                agreement_score = 50.0
+                agreement_analysis = "Retrieved sources provide neutral background context without direct consensus or dispute."
+            else:
+                dominant_count = max(len(supporting), len(contradicting))
+                agreement_score = round((dominant_count / total_eval) * 100, 1)
+                if len(supporting) > 0 and len(contradicting) > 0:
+                    agreement_analysis = f"Source Disagreement Detected: {len(supporting)} source(s) corroborate aspects of the claim while {len(contradicting)} source(s) register factual contradiction."
+                elif len(supporting) > 0:
+                    agreement_analysis = f"High Source Consensus: All {len(supporting)} evaluable source(s) unanimously corroborate the factual premise."
+                else:
+                    agreement_analysis = f"High Source Consensus: All {len(contradicting)} evaluable source(s) uniformly refute the claim."
 
         retrieved_sources_list = list(sources_dict.values())
         for s in retrieved_sources_list:
