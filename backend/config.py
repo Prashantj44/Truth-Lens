@@ -5,16 +5,28 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
-TRUSTED_DOCS_DIR = DATA_DIR / "trusted_docs"
-UPLOADS_DIR = DATA_DIR / "uploads"
-CHROMA_PERSIST_DIR = BASE_DIR / "chroma_db"
-DB_PATH = BASE_DIR / "backend" / "database" / "truthlens.db"
+IS_VERCEL = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
 
-# Create required directories
+BASE_DIR = Path(__file__).resolve().parent.parent
+TRUSTED_DOCS_DIR = BASE_DIR / "data" / "trusted_docs"
+
+if IS_VERCEL:
+    DATA_DIR = Path("/tmp/data")
+    UPLOADS_DIR = DATA_DIR / "uploads"
+    CHROMA_PERSIST_DIR = Path("/tmp/chroma_db")
+    DB_PATH = Path("/tmp/truthlens.db")
+else:
+    DATA_DIR = BASE_DIR / "data"
+    UPLOADS_DIR = DATA_DIR / "uploads"
+    CHROMA_PERSIST_DIR = BASE_DIR / "chroma_db"
+    DB_PATH = BASE_DIR / "backend" / "database" / "truthlens.db"
+
+# Safely create required directories
 for d in [DATA_DIR, TRUSTED_DOCS_DIR, UPLOADS_DIR, CHROMA_PERSIST_DIR, DB_PATH.parent]:
-    d.mkdir(parents=True, exist_ok=True)
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
 # Vector DB & Embeddings
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")

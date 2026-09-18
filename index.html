@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TruthLens — Explainable Fact Verification Engine</title>
+  
+  <!-- Modern Editorial & Precision Sans Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Inter"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18, ReactDOM & Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    *, *::before, *::after {
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+    }
+
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    }
+
+    html.dark body {
+      background-color: #0B0F17;
+      color: #F8FAFC;
+    }
+
+    /* Light Theme Surfaces */
+    .surface-card {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 20px -4px rgba(15, 23, 42, 0.03);
+    }
+    .surface-card:hover {
+      border-color: #CBD5E1;
+    }
+
+    /* Dark Theme Surfaces */
+    html.dark .surface-card {
+      background: #131B2A;
+      border: 1px solid #1E293B;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    html.dark .surface-card:hover {
+      border-color: #334155;
+    }
+
+    /* Omnibox High-Focus Card */
+    .omnibox-surface {
+      background: #FFFFFF;
+      border: 1.5px solid #CBD5E1;
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.02);
+    }
+    .omnibox-surface:focus-within {
+      border-color: #0F172A;
+      box-shadow: 0 15px 40px -5px rgba(15, 23, 42, 0.12), 0 0 0 3px rgba(15, 23, 42, 0.08);
+    }
+
+    html.dark .omnibox-surface {
+      background: #111827;
+      border: 1.5px solid #1F2937;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    }
+    html.dark .omnibox-surface:focus-within {
+      border-color: #60A5FA;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 3px rgba(96, 165, 250, 0.15);
+    }
+
+    .ticker-move {
+      display: inline-block;
+      white-space: nowrap;
+      animation: ticker 42s linear infinite;
+    }
+    @keyframes ticker {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(-50%, 0, 0); }
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 9999px; }
+    html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-slate-800 selection:text-white dark:selection:bg-white dark:selection:text-black">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- Minimalist Precision Icons ---
+    const Icon = ({ name, className = "w-4 h-4" }) => {
+      switch (name) {
+        case 'shield':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
+        case 'lens':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8" strokeWidth="2" /><path strokeLinecap="round" strokeWidth="2" d="M21 21l-4.35-4.35M11 8a3 3 0 00-3 3" /></svg>;
+        case 'database':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>;
+        case 'history':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        case 'chart':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+        case 'settings':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+        case 'check':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>;
+        case 'x':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>;
+        case 'alert':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>;
+        case 'help':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+        case 'trash':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+        case 'upload':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
+        case 'sparkles':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+        case 'link':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
+        case 'message':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
+        case 'copy':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
+        case 'arrow-right':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>;
+        case 'zap':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+        case 'book':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>;
+        case 'sun':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
+        case 'moon':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>;
+        default:
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2" /></svg>;
+      }
+    };
+
+    // --- Semantic, Highly Legible Verdict Badges ---
+    const VerdictBadge = ({ verdict, size = "md" }) => {
+      const cfg = {
+        'SUPPORTED': {
+          label: 'VERIFIED TRUE',
+          sub: 'Confirmed by authoritative evidence in indexed dossiers',
+          border: 'border-emerald-300 dark:border-emerald-800/80',
+          bg: 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200',
+          dot: 'bg-emerald-600 dark:bg-emerald-400',
+          badgeText: 'text-emerald-700 dark:text-emerald-300',
+        },
+        'REFUTED': {
+          label: 'DEBUNKED / FALSE',
+          sub: 'Directly contradicted by official records & evidence',
+          border: 'border-rose-300 dark:border-rose-800/80',
+          bg: 'bg-rose-50 text-rose-900 dark:bg-rose-950/60 dark:text-rose-200',
+          dot: 'bg-rose-600 dark:bg-rose-400',
+          badgeText: 'text-rose-700 dark:text-rose-300',
+        },
+        'MISLEADING': {
+          label: 'MISLEADING / MIXED',
+          sub: 'Contains partial truth but lacks vital context or nuances',
+          border: 'border-amber-300 dark:border-amber-800/80',
+          bg: 'bg-amber-50 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200',
+          dot: 'bg-amber-600 dark:bg-amber-400',
+          badgeText: 'text-amber-700 dark:text-amber-300',
+        },
+        'INSUFFICIENT EVIDENCE': {
+          label: 'UNVERIFIED CLAIM',
+          sub: 'Insufficient reliable documentation found to verify',
+          border: 'border-slate-300 dark:border-slate-700',
+          bg: 'bg-slate-100 text-slate-800 dark:bg-slate-850 dark:text-slate-200',
+          dot: 'bg-slate-500 dark:bg-slate-400',
+          badgeText: 'text-slate-700 dark:text-slate-300',
+        }
+      }[verdict] || {
+        label: verdict || 'UNKNOWN',
+        sub: 'Pending analysis',
+        border: 'border-slate-300 dark:border-slate-700',
+        bg: 'bg-slate-100 text-slate-800 dark:bg-slate-850 dark:text-slate-200',
+        dot: 'bg-slate-500 dark:bg-slate-400',
+        badgeText: 'text-slate-700 dark:text-slate-300',
+      };
+
+      if (size === "lg") {
+        return (
+          <div className={`px-5 py-3.5 rounded-2xl border ${cfg.border} ${cfg.bg} flex items-center gap-4 shadow-sm`}>
+            <div className={`w-3.5 h-3.5 rounded-full ${cfg.dot} shrink-0 animate-pulse`}></div>
+            <div>
+              <div className={`text-base sm:text-lg font-bold tracking-tight font-sans ${cfg.badgeText}`}>{cfg.label}</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400 font-sans mt-0.5">{cfg.sub}</div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border ${cfg.border} ${cfg.bg} text-xs font-semibold`}>
+          <span className={`w-2 h-2 rounded-full ${cfg.dot}`}></span>
+          <span className={cfg.badgeText}>{cfg.label}</span>
+        </span>
+      );
+    };
+
+    // --- Evidence Card Designed for Reading Comfort ---
+    const EvidenceChunkCard = ({ chunk }) => {
+      const isSupport = chunk.stance === 'SUPPORT';
+      const isContradict = chunk.stance === 'CONTRADICT';
+
+      return (
+        <div className={`p-5 rounded-2xl border transition-all space-y-3.5 ${
+          isSupport 
+            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/60' 
+            : isContradict 
+            ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60' 
+            : 'bg-slate-50/80 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800'
+        }`}>
+          <div className="flex items-center justify-between gap-2 text-xs font-mono">
+            <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide border ${
+              isSupport 
+                ? 'bg-emerald-100 dark:bg-emerald-900/70 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700' 
+                : isContradict 
+                ? 'bg-rose-100 dark:bg-rose-900/70 text-rose-900 dark:text-rose-200 border-rose-300 dark:border-rose-700' 
+                : 'bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+            }`}>
+              {isSupport ? '✓ CORROBORATING EVIDENCE' : isContradict ? '✗ REFUTING EVIDENCE' : 'ℹ CONTEXTUAL EXCERPT'}
+            </span>
+            <span className="text-slate-500 dark:text-slate-400 font-medium">
+              Match: <strong className="text-slate-800 dark:text-slate-200">{chunk.relevance_score != null ? Math.round(chunk.relevance_score) : (chunk.similarity_score != null ? Math.round(chunk.similarity_score) : 85)}%</strong>
+            </span>
+          </div>
+
+          <p className="text-[15px] text-slate-800 dark:text-slate-200 leading-relaxed font-sans font-normal">
+            "{chunk.text}"
+          </p>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-200/70 dark:border-slate-800/80 text-xs text-slate-500 dark:text-slate-400">
+            <span className="truncate max-w-[280px] font-medium text-slate-700 dark:text-slate-300">
+              📄 {chunk.document_name}
+            </span>
+            <span className="font-mono">Credibility: <strong className="text-slate-700 dark:text-slate-300">{chunk.credibility_score}%</strong></span>
+          </div>
+        </div>
+      );
+    };
+
+    // --- Main Application Component ---
+    function App() {
+      const [darkMode, setDarkMode] = useState(() => {
+        return localStorage.getItem('truthlens_theme') === 'dark';
+      });
+
+      const [activeTab, setActiveTab] = useState('verify');
+      const [inputMode, setInputMode] = useState('text'); // 'text', 'url', 'forward'
+      
+      const [claimInput, setClaimInput] = useState('');
+      const [urlInput, setUrlInput] = useState('');
+      const [forwardInput, setForwardInput] = useState('');
+      
+      const [selectedProvider, setSelectedProvider] = useState('fallback');
+      const [apiKeyInput, setApiKeyInput] = useState('');
+      
+      const [verifying, setVerifying] = useState(false);
+      const [progressStep, setProgressStep] = useState(0);
+      const [extractingUrl, setExtractingUrl] = useState(false);
+      const [cleaningForward, setCleaningForward] = useState(false);
+      const [syncingNews, setSyncingNews] = useState(false);
+      const [trainingDataset, setTrainingDataset] = useState(false);
+      const [seeding, setSeeding] = useState(false);
+      
+      const [currentResult, setCurrentResult] = useState(null);
+      const [trendingFilter, setTrendingFilter] = useState('ALL');
+      const [trendingClaims, setTrendingClaims] = useState([]);
+      const [health, setHealth] = useState(null);
+      const [documents, setDocuments] = useState([]);
+      const [history, setHistory] = useState([]);
+      const [analytics, setAnalytics] = useState(null);
+      const [newsStatus, setNewsStatus] = useState(null);
+      const [toast, setToast] = useState(null);
+
+      const chartRef = useRef(null);
+      const chartInstance = useRef(null);
+
+      // Sync dark mode class with HTML element
+      useEffect(() => {
+        if (darkMode) {
+          document.documentElement.classList.add('dark');
+          localStorage.setItem('truthlens_theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          localStorage.setItem('truthlens_theme', 'light');
+        }
+      }, [darkMode]);
+
+      const toggleTheme = () => setDarkMode(!darkMode);
+
+      const showToast = (msg, type = 'info') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 4000);
+      };
+
+      useEffect(() => {
+        loadHealth();
+        loadDocuments();
+        loadHistory();
+        loadAnalytics();
+        loadNewsStatus();
+        loadTrendingClaims();
+      }, []);
+
+      const loadHealth = async () => {
+        try {
+          const res = await fetch('/api/health');
+          const data = await res.json();
+          setHealth(data);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      const loadDocuments = async () => {
+        try {
+          const res = await fetch('/api/documents');
+          const data = await res.json();
+          setDocuments(data);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      const loadHistory = async () => {
+        try {
+          const res = await fetch('/api/history?limit=50');
+          const data = await res.json();
+          setHistory(data);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      const loadAnalytics = async () => {
+        try {
+          const res = await fetch('/api/analytics');
+          const data = await res.json();
+          setAnalytics(data);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      const loadNewsStatus = async () => {
+        try {
+          const res = await fetch('/api/news/status');
+          const data = await res.json();
+          setNewsStatus(data);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      const loadTrendingClaims = async () => {
+        try {
+          const res = await fetch('/api/news/trending');
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTrendingClaims(data);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      // Handle Core Claim Verification (Only triggered when user clicks "Verify Claim" or presses Ctrl+Enter)
+      const handleVerify = async (claimToVerify) => {
+        const text = (claimToVerify || claimInput).trim();
+        if (!text) {
+          showToast('Please enter a claim or statement to verify.', 'error');
+          return;
+        }
+
+        setVerifying(true);
+        setCurrentResult(null);
+        setProgressStep(1);
+
+        const stepTimer1 = setTimeout(() => setProgressStep(2), 300);
+        const stepTimer2 = setTimeout(() => setProgressStep(3), 700);
+        const stepTimer3 = setTimeout(() => setProgressStep(4), 1100);
+
+        try {
+          const res = await fetch('/api/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              claim: text,
+              llm_provider: selectedProvider,
+              api_key: apiKeyInput || null
+            })
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || 'Verification failed');
+          }
+
+          const data = await res.json();
+          setCurrentResult(data);
+          loadHealth();
+          loadHistory();
+          loadAnalytics();
+          showToast(`Audit Completed: ${data.verdict}`, 'success');
+        } catch (err) {
+          showToast(err.message, 'error');
+        } finally {
+          clearTimeout(stepTimer1);
+          clearTimeout(stepTimer2);
+          clearTimeout(stepTimer3);
+          setVerifying(false);
+          setProgressStep(0);
+        }
+      };
+
+      // Handle URL Extraction (Loads headline into editor WITHOUT auto-verifying)
+      const handleExtractUrl = async () => {
+        const u = urlInput.trim();
+        if (!u) {
+          showToast('Please enter an online news article URL.', 'error');
+          return;
+        }
+        setExtractingUrl(true);
+        showToast('Scanning article URL & extracting headline...', 'info');
+        try {
+          const res = await fetch('/api/news/extract-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: u })
+          });
+          const data = await res.json();
+          if (data.status === 'success' && data.extracted_claim) {
+            setClaimInput(data.extracted_claim);
+            setInputMode('text');
+            setCurrentResult(null);
+            showToast('Headline extracted! Click "Verify Claim" to audit.', 'success');
+          } else {
+            showToast(data.message || 'Could not extract a readable headline from this link.', 'error');
+          }
+        } catch (err) {
+          showToast('URL extraction failed: ' + err.message, 'error');
+        } finally {
+          setExtractingUrl(false);
+        }
+      };
+
+      // Handle WhatsApp Forward Cleaning (Loads cleaned claim into editor WITHOUT auto-verifying)
+      const handleCleanForward = async () => {
+        const text = forwardInput.trim();
+        if (!text) {
+          showToast('Please paste a WhatsApp forward or viral message.', 'error');
+          return;
+        }
+        setCleaningForward(true);
+        showToast('Cleaning forward headers & isolating claim...', 'info');
+        try {
+          const res = await fetch('/api/news/clean-forward', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+          });
+          const data = await res.json();
+          const clean = data.cleaned_claim || text;
+          setClaimInput(clean);
+          setInputMode('text');
+          setCurrentResult(null);
+          showToast('Assertion isolated! Click "Verify Claim" to audit.', 'success');
+        } catch (err) {
+          showToast('Forward cleaning failed: ' + err.message, 'error');
+        } finally {
+          setCleaningForward(false);
+        }
+      };
+
+      // 1-Click Copy Fact-Check Report for WhatsApp / Social Media
+      const handleCopyWhatsAppReport = (result) => {
+        if (!result) return;
+        const verdictEmoji = {
+          'SUPPORTED': '✅ [VERIFIED TRUE]',
+          'REFUTED': '❌ [DEBUNKED / FALSE]',
+          'MISLEADING': '⚠️ [MISLEADING / HALF-TRUTH]',
+          'INSUFFICIENT EVIDENCE': '❓ [UNVERIFIED / INSUFFICIENT EVIDENCE]'
+        }[result.verdict] || '🛡️ [FACT-CHECK]';
+
+        const sources = (result.retrieved_sources || []).map(s => s.source || s.document_name).join(', ') || 'TruthLens Evidence Vault';
+
+        const text = 
+`🛡️ *TRUTHLENS FACT-CHECK AUDIT*
+━━━━━━━━━━━━━━━━━━━━
+📌 *Claim:* "${result.claim}"
+⚖️ *Verdict:* ${verdictEmoji}
+📊 *Confidence:* ${result.confidence_score}%
+
+💡 *Executive Rationale:*
+${result.explanation}
+
+${result.key_reasoning ? `🔍 *Key Evidence:* 
+${result.key_reasoning}
+` : ''}
+📚 *Verified Against:* ${sources}
+━━━━━━━━━━━━━━━━━━━━
+_Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied Fact-Check Report to Clipboard for WhatsApp/Social Media!', 'success');
+          }).catch(() => {
+            showToast('Could not access clipboard.', 'error');
+          });
+        } else {
+          showToast('Clipboard not supported in this browser.', 'error');
+        }
+      };
+
+      // Handle Live Daily News Sync
+      const handleSyncNews = async () => {
+        setSyncingNews(true);
+        showToast('Pulling latest 24h updates from Reuters, AP, BBC, and PolitiFact...', 'info');
+        try {
+          const res = await fetch('/api/news/sync', { method: 'POST' });
+          const data = await res.json();
+          showToast(data.message || 'News sync completed', 'success');
+          loadHealth();
+          loadDocuments();
+          loadNewsStatus();
+          loadTrendingClaims();
+          loadAnalytics();
+        } catch (err) {
+          showToast('Live news sync failed: ' + err.message, 'error');
+        } finally {
+          setSyncingNews(false);
+        }
+      };
+
+      // Handle Historical Dataset Training
+      const handleTrainDataset = async () => {
+        setTrainingDataset(true);
+        showToast('Training model & indexing ISOT Reuters & PolitiFact LIAR dataset...', 'info');
+        try {
+          const res = await fetch('/api/news/train-dataset', { method: 'POST' });
+          const data = await res.json();
+          showToast(data.message, 'success');
+          loadHealth();
+          loadDocuments();
+          loadNewsStatus();
+          loadTrendingClaims();
+          loadAnalytics();
+        } catch (err) {
+          showToast('Dataset training failed: ' + err.message, 'error');
+        } finally {
+          setTrainingDataset(false);
+        }
+      };
+
+      // Handle Curated Fact Dossiers Seeding
+      const handleSeed = async () => {
+        setSeeding(true);
+        try {
+          const res = await fetch('/api/seed', { method: 'POST' });
+          const data = await res.json();
+          showToast(data.message, 'success');
+          loadHealth();
+          loadDocuments();
+          loadAnalytics();
+        } catch (err) {
+          showToast('Failed to seed knowledge vault: ' + err.message, 'error');
+        } finally {
+          setSeeding(false);
+        }
+      };
+
+      // Handle Document Upload
+      const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('source_name', file.name.replace(/\.[^/.]+$/, ''));
+
+        showToast(`Indexing ${file.name}...`, 'info');
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await res.json();
+          showToast(`Indexed ${data.filename} (${data.chunks_indexed} chunks)`, 'success');
+          loadHealth();
+          loadDocuments();
+          loadAnalytics();
+        } catch (err) {
+          showToast('Upload failed: ' + err.message, 'error');
+        }
+      };
+
+      // Handle Delete Document
+      const handleDeleteDoc = async (id, name) => {
+        if (!confirm(`Delete ${name} and remove its vectors from the vault?`)) return;
+        try {
+          await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+          showToast(`Deleted ${name}`, 'success');
+          loadHealth();
+          loadDocuments();
+          loadAnalytics();
+        } catch (err) {
+          showToast('Delete failed: ' + err.message, 'error');
+        }
+      };
+
+      // Render Analytics Chart with Harmonious Semantic Colors
+      useEffect(() => {
+        if (activeTab === 'analytics' && analytics && chartRef.current) {
+          if (chartInstance.current) {
+            chartInstance.current.destroy();
+          }
+
+          const ctx = chartRef.current.getContext('2d');
+          chartInstance.current = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['SUPPORTED', 'REFUTED', 'MISLEADING', 'INSUFFICIENT EVIDENCE'],
+              datasets: [{
+                data: [
+                  analytics.verdict_counts.SUPPORTED || 0,
+                  analytics.verdict_counts.REFUTED || 0,
+                  analytics.verdict_counts.MISLEADING || 0,
+                  analytics.verdict_counts['INSUFFICIENT EVIDENCE'] || 0
+                ],
+                backgroundColor: ['#10B981', '#F43F5E', '#F59E0B', '#94A3B8'],
+                borderWidth: 2,
+                borderColor: darkMode ? '#131B2A' : '#FFFFFF'
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: { color: darkMode ? '#94A3B8' : '#475569', font: { family: 'Plus Jakarta Sans', size: 12 }, boxWidth: 14 }
+                }
+              },
+              cutout: '70%'
+            }
+          });
+        }
+      }, [activeTab, analytics, darkMode]);
+
+      // Example benchmark claims
+      const exampleClaims = [
+        "St. Francis Institute of Technology is in Mumbai.",
+        "Narendra Modi is the Prime Minister of India.",
+        "Donald Trump is the Prime Minister of India.",
+        "India is the third largest economy in the world.",
+        "Renewable energy accounts for over 30 percent of global electricity.",
+        "Antibiotics can cure viral infections like the flu.",
+        "Flying saucers were discovered in the lost city of Atlantis."
+      ];
+
+      return (
+        <div className="flex flex-col min-h-screen">
+          {/* Toast Notification */}
+          {toast && (
+            <div className="fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xl flex items-center gap-3 backdrop-blur-xl text-xs sm:text-sm font-medium">
+              <Icon name={toast.type === 'error' ? 'x' : 'check'} className="w-4 h-4 text-slate-800 dark:text-slate-100" />
+              <span>{toast.msg}</span>
+            </div>
+          )}
+
+          {/* Top Marquee Telemetry Bar */}
+          <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-950 text-[11px] font-mono py-1.5 px-4 text-slate-600 dark:text-slate-400 overflow-hidden">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 tracking-wider">LIVE VERIFICATION RADAR</span>
+                <span className="text-slate-400 dark:text-slate-600">|</span>
+              </div>
+              <div className="overflow-hidden flex-1">
+                <div className="ticker-move text-slate-600 dark:text-slate-400">
+                  <span>• REUTERS WORLD • ASSOCIATED PRESS • BBC WORLD • POLITIFACT ARCHIVES • 420+ VECTOR DOSSIERS INDEXED • 24H AUTO-CRAWLER ACTIVE • HYBRID SEMANTIC RERANKER • </span>
+                  <span>• REUTERS WORLD • ASSOCIATED PRESS • BBC WORLD • POLITIFACT ARCHIVES • 420+ VECTOR DOSSIERS INDEXED • 24H AUTO-CRAWLER ACTIVE • HYBRID SEMANTIC RERANKER • </span>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 shrink-0 text-slate-600 dark:text-slate-400 text-xs">
+                <span>Vault:</span>
+                <strong className="text-slate-900 dark:text-white">{health?.indexed_chunks ?? 0} Chunks</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Minimalist Sticky Header */}
+          <header className="sticky top-0 z-40 w-full border-b border-slate-200/90 dark:border-slate-800/80 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-xl">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              
+              {/* Brand Logo */}
+              <div 
+                onClick={() => setActiveTab('verify')}
+                className="flex items-center gap-3 cursor-pointer group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-750 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-all">
+                  <Icon name="lens" className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xl tracking-tight text-slate-900 dark:text-white font-sans">
+                    TruthLens
+                  </span>
+                  <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                    v2.4
+                  </span>
+                </div>
+              </div>
+
+              {/* Navigation Tabs */}
+              <nav className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+                {[
+                  { id: 'verify', label: 'Verify', icon: 'shield' },
+                  { id: 'knowledge', label: 'Knowledge Vault', icon: 'database' },
+                  { id: 'history', label: 'Audit History', icon: 'history' },
+                  { id: 'analytics', label: 'Analytics', icon: 'chart' },
+                  { id: 'settings', label: 'Settings', icon: 'settings' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setActiveTab(t.id)}
+                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      activeTab === t.id
+                        ? 'bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-sm border border-slate-200/80 dark:border-slate-700'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Icon name={t.icon} className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">{t.label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              {/* Header Right Actions */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-sm"
+                  title={darkMode ? "Switch to Reading Light Mode" : "Switch to Dark Mode"}
+                >
+                  <Icon name={darkMode ? "sun" : "moon"} className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Expansive Content Area */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+            
+            {/* ======================================================== */}
+            {/* TAB 1: VERIFY CLAIM (MAIN WORKSPACE)                     */}
+            {/* ======================================================== */}
+            {activeTab === 'verify' && (
+              <div className="space-y-12">
+                
+                {/* Refined, Editorial Hero */}
+                <div className="text-center max-w-4xl mx-auto pt-2 pb-2">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-xs font-mono font-medium mb-4">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Explainable Fact Verification Engine
+                  </div>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-4 leading-tight font-sans">
+                    Verify the truth behind any claim or news story.
+                  </h1>
+                  <p className="text-slate-600 dark:text-slate-400 text-base sm:text-xl leading-relaxed max-w-3xl mx-auto font-sans">
+                    Cross-examine claims, web articles, and viral messages against 420+ indexed authoritative sources with verifiable evidence.
+                  </p>
+                </div>
+
+                {/* Perplexity-Grade Omnibox Input Center (Expansive Width) */}
+                <div className="max-w-4xl w-full mx-auto">
+                  <div className="omnibox-surface rounded-2xl p-6 sm:p-8 transition-all">
+                    
+                    {/* Input Mode Selector */}
+                    <div className="flex items-center gap-2 mb-5 pb-4 border-b border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-medium">
+                      {[
+                        { id: 'text', label: 'Claim / Statement', icon: 'shield' },
+                        { id: 'url', label: 'News Article URL', icon: 'link' },
+                        { id: 'forward', label: 'WhatsApp / Viral Message', icon: 'message' },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => {
+                            setInputMode(m.id);
+                            setCurrentResult(null);
+                          }}
+                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg transition-all ${
+                            inputMode === m.id
+                              ? 'bg-slate-900 text-white dark:bg-slate-800 font-bold shadow-sm'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <Icon name={m.icon} className="w-3.5 h-3.5" />
+                          <span>{m.label}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Mode 1: Direct Text Input */}
+                    {inputMode === 'text' && (
+                      <div className="space-y-4">
+                        <textarea
+                          id="claim-editor"
+                          rows={3}
+                          value={claimInput}
+                          onChange={(e) => {
+                            setClaimInput(e.target.value);
+                            if (currentResult) setCurrentResult(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              handleVerify();
+                            }
+                          }}
+                          placeholder="Type or paste any claim here (e.g. Narendra Modi is the Prime Minister of India...)"
+                          className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-5 py-4 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-600 dark:focus:border-slate-500 text-base sm:text-lg resize-none font-sans leading-relaxed shadow-inner"
+                        />
+                        
+                        <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
+                          <div className="text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400">
+                            Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300">Enter</kbd> to verify
+                          </div>
+
+                          <button
+                            id="verify-claim-button"
+                            onClick={() => handleVerify()}
+                            disabled={verifying}
+                            className="px-8 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-bold text-sm sm:text-base shadow-lg transition-all flex items-center gap-2.5 disabled:opacity-50 active:scale-95"
+                          >
+                            {verifying ? (
+                              <>
+                                <svg className="animate-spin -ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                                <span>Verifying Evidence...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Verify Claim</span>
+                                <Icon name="arrow-right" className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mode 2: Online News Link / URL Scanner */}
+                    {inputMode === 'url' && (
+                      <div className="space-y-4">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <input
+                            type="url"
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleExtractUrl();
+                              }
+                            }}
+                            placeholder="https://www.reuters.com/world/... or https://apnews.com/..."
+                            className="flex-1 bg-slate-50 dark:bg-slate-950 rounded-xl px-5 py-3.5 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-500 text-base font-mono"
+                          />
+                          <button
+                            onClick={handleExtractUrl}
+                            disabled={extractingUrl || verifying}
+                            className="px-6 py-3.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shrink-0 shadow-md"
+                          >
+                            <Icon name="link" className="w-4 h-4" />
+                            <span>{extractingUrl ? 'Extracting...' : 'Extract Headline'}</span>
+                          </button>
+                        </div>
+                        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                          TruthLens will parse the web article and load the reported assertion into the editor for you to review and verify.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Mode 3: WhatsApp Forward / Viral Rumor Cleaner */}
+                    {inputMode === 'forward' && (
+                      <div className="space-y-4">
+                        <textarea
+                          rows={3}
+                          value={forwardInput}
+                          onChange={(e) => setForwardInput(e.target.value)}
+                          placeholder="Paste WhatsApp message here: e.g. 'Forwarded as received: Breaking news! WHO announces that... Share to 10 groups!'"
+                          className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-5 py-4 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-slate-500 text-base resize-none font-sans"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handleCleanForward}
+                            disabled={cleaningForward || verifying}
+                            className="px-7 py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-sm transition-all flex items-center gap-2 disabled:opacity-50 shadow-md"
+                          >
+                            <Icon name="message" className="w-4 h-4" />
+                            <span>{cleaningForward ? 'Cleaning...' : 'Clean & Load Claim'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* Suggestion Benchmarks */}
+                  <div className="mt-5 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Try benchmark:</span>
+                    {exampleClaims.map((claim, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setClaimInput(claim);
+                          setInputMode('text');
+                          setCurrentResult(null);
+                          showToast('Claim loaded into editor. Click "Verify Claim" to audit.', 'info');
+                          const el = document.getElementById('claim-editor');
+                          if (el) el.focus();
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 transition-colors text-left shadow-sm font-sans"
+                      >
+                        "{claim.length > 40 ? claim.slice(0, 40) + '...' : claim}"
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Progress Animation (Only visible during verification) */}
+                {verifying && (
+                  <div className="max-w-4xl w-full mx-auto surface-card rounded-2xl p-6 border-slate-300 dark:border-slate-700 animate-pulse">
+                    <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      Executing Fact-Verification Pipeline
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs sm:text-sm">
+                      {[
+                        { step: 1, label: 'Entity Grounding' },
+                        { step: 2, label: 'Vector Retrieval' },
+                        { step: 3, label: 'Semantic Reranker' },
+                        { step: 4, label: 'NLI Synthesis' }
+                      ].map((s) => (
+                        <div key={s.step} className={`p-3 rounded-xl border flex items-center gap-2.5 ${
+                          progressStep >= s.step 
+                            ? 'bg-slate-900 text-white dark:bg-slate-800 dark:border-slate-600 shadow-sm' 
+                            : 'bg-slate-50 text-slate-400 dark:bg-slate-950 dark:border-slate-850 dark:text-slate-600'
+                        }`}>
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${
+                            progressStep >= s.step ? 'bg-emerald-400 text-slate-900' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                          }`}>
+                            {s.step}
+                          </span>
+                          <span className="truncate font-semibold">{s.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* RESULTS PRESENTATION (Expansive width) */}
+                {currentResult && !verifying && (
+                  <div className="max-w-5xl w-full mx-auto space-y-8 pt-2">
+                    
+                    {/* Similar Claim Alert */}
+                    {currentResult.similar_claim_found && (
+                      <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start justify-between gap-3 text-xs sm:text-sm">
+                        <div className="flex items-start gap-3">
+                          <Icon name="history" className="w-5 h-5 text-amber-700 dark:text-amber-400 mt-0.5" />
+                          <div>
+                            <span className="font-bold text-amber-900 dark:text-amber-200">
+                              Claim Similarity Match ({currentResult.similar_claim_found.similarity_score}% overlap)
+                            </span>
+                            <p className="text-amber-800 dark:text-amber-300 mt-0.5 font-sans">
+                              Previously verified: <strong className="font-semibold">"{currentResult.similar_claim_found.claim}"</strong> ({currentResult.similar_claim_found.verdict})
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-amber-700/80 dark:text-amber-400 text-xs font-mono shrink-0">{currentResult.similar_claim_found.timestamp}</span>
+                      </div>
+                    )}
+
+                    {/* Verdict Hero Card */}
+                    <div className="surface-card rounded-3xl p-6 sm:p-10 space-y-8 shadow-sm">
+                      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
+                        <div className="space-y-2 flex-1">
+                          <span className="text-xs uppercase font-mono font-bold tracking-wider text-slate-500 dark:text-slate-400">
+                            Verified Assertion
+                          </span>
+                          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-snug font-sans">
+                            "{currentResult.claim}"
+                          </h2>
+                        </div>
+                        <div className="shrink-0">
+                          <VerdictBadge verdict={currentResult.verdict} size="lg" />
+                        </div>
+                      </div>
+
+                      {/* Score Metrics Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 font-mono">
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 uppercase font-bold">Confidence Score</div>
+                          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1">
+                            {currentResult.confidence_score}%
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 mt-3.5 overflow-hidden">
+                            <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${currentResult.confidence_score}%` }}></div>
+                          </div>
+                        </div>
+
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 uppercase font-bold">Source Credibility</div>
+                          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1">
+                            {currentResult.source_credibility_score}%
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 mt-3.5 overflow-hidden">
+                            <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${currentResult.source_credibility_score}%` }}></div>
+                          </div>
+                        </div>
+
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                          <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 uppercase font-bold">Evidence Agreement</div>
+                          <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1">
+                            {currentResult.evidence_agreement_score}%
+                          </div>
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2.5 mt-3.5 overflow-hidden">
+                            <div className="bg-amber-500 h-full rounded-full" style={{ width: `${currentResult.evidence_agreement_score}%` }}></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Rationale Breakdown (Optimized for Reading) */}
+                      <div className="space-y-4 pt-2">
+                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                          <Icon name="sparkles" className="w-4 h-4 text-indigo-500" />
+                          Verdict Rationale & Findings
+                        </h3>
+                        <div className="p-6 rounded-2xl bg-slate-50/90 dark:bg-slate-900/60 border-l-4 border-indigo-500 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-base sm:text-lg leading-relaxed font-sans">
+                          {currentResult.explanation}
+                        </div>
+
+                        {currentResult.key_reasoning && (
+                          <div className="p-5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                            <span className="font-bold text-slate-900 dark:text-white block mb-1 text-xs font-mono uppercase">Key Analytical Reasoning:</span>
+                            {currentResult.key_reasoning}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Share / WhatsApp Action Bar */}
+                      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                          Audited against TruthLens Evidence Vault • {currentResult.llm_provider_used}
+                        </span>
+
+                        <button
+                          onClick={() => handleCopyWhatsAppReport(currentResult)}
+                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shadow-md active:scale-95"
+                        >
+                          <Icon name="copy" className="w-4 h-4" />
+                          <span>Copy WhatsApp Fact-Check Report</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Evidence Columns (Side-by-side on desktop) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      
+                      {/* Supporting Evidence */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-2 px-1">
+                          <Icon name="check" className="w-4 h-4" />
+                          Corroborating Evidence ({currentResult.supporting_evidence?.length || 0})
+                        </h3>
+
+                        {currentResult.supporting_evidence?.length > 0 ? (
+                          <div className="space-y-4">
+                            {currentResult.supporting_evidence.map((chunk) => (
+                              <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-8 rounded-2xl surface-card text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-mono">
+                            No direct corroborating evidence found.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Contradicting Evidence */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-mono font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-2 px-1">
+                          <Icon name="x" className="w-4 h-4" />
+                          Refuting Evidence ({currentResult.contradicting_evidence?.length || 0})
+                        </h3>
+
+                        {currentResult.contradicting_evidence?.length > 0 ? (
+                          <div className="space-y-4">
+                            {currentResult.contradicting_evidence.map((chunk) => (
+                              <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-8 rounded-2xl surface-card text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-mono">
+                            No direct contradictory evidence found.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contextual Excerpts */}
+                    {currentResult.neutral_evidence?.length > 0 && (
+                      <div className="space-y-4 pt-2">
+                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+                          Contextual Excerpts ({currentResult.neutral_evidence.length})
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {currentResult.neutral_evidence.map((chunk) => (
+                            <EvidenceChunkCard key={chunk.chunk_id} chunk={chunk} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sources Citations Table */}
+                    <div className="surface-card rounded-2xl p-6 sm:p-8">
+                      <h3 className="text-sm font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-5 flex items-center gap-2">
+                        <Icon name="database" className="w-4 h-4 text-indigo-500" />
+                        Authoritative Sources & Citations
+                      </h3>
+
+                      {currentResult.retrieved_sources?.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs sm:text-sm">
+                            <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
+                              <tr>
+                                <th className="pb-3 px-3 font-semibold">Source Name</th>
+                                <th className="pb-3 px-3 font-semibold">Type</th>
+                                <th className="pb-3 px-3 font-semibold">Scope</th>
+                                <th className="pb-3 px-3 text-right font-semibold">Credibility</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+                              {currentResult.retrieved_sources.map((src, i) => (
+                                <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-850/40">
+                                  <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white font-sans">{src.source || src.document_name}</td>
+                                  <td className="py-3 px-3">
+                                    <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium">
+                                      {src.source_type}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-3 text-slate-500 dark:text-slate-400">
+                                    {src.pages?.length > 0 ? `pp. ${src.pages.join(', ')}` : 'Full Document'}
+                                  </td>
+                                  <td className="py-3 px-3 text-right font-bold text-slate-900 dark:text-white">
+                                    {src.credibility_score}%
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-slate-500 font-mono text-center py-4">No sources retrieved.</div>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+
+                {/* ======================================================== */}
+                {/* TODAY'S TRENDING NEWS & VIRAL CLAIMS RADAR               */}
+                {/* ======================================================== */}
+                <div className="max-w-5xl w-full mx-auto space-y-6 pt-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-sans">
+                        Today's Trending News & Viral Rumors
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                        Live 24h feed of active news stories. Click to load into the verifier.
+                      </p>
+                    </div>
+
+                    {/* Category Filter Pills */}
+                    <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono">
+                      {['ALL', 'POLITICS', 'ECONOMY', 'HEALTH', 'TECHNOLOGY', 'MYTH', 'LIVE NEWS'].map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setTrendingFilter(cat)}
+                          className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                            trendingFilter === cat
+                              ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold shadow-sm'
+                              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Trending Claims Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {trendingClaims
+                      .filter(item => trendingFilter === 'ALL' || item.badge === trendingFilter || item.category?.includes(trendingFilter))
+                      .slice(0, 9)
+                      .map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="surface-card rounded-2xl p-5 flex flex-col justify-between hover:border-slate-400 dark:hover:border-slate-600 transition-all space-y-4"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-2 text-xs font-mono">
+                              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-[10px]">
+                                {item.badge || item.category}
+                              </span>
+                              <span className="text-slate-500 dark:text-slate-400 text-[11px] truncate max-w-[120px]">
+                                {item.viral_level || 'Viral Story'}
+                              </span>
+                            </div>
+
+                            <p className="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 leading-snug font-sans">
+                              "{item.claim}"
+                            </p>
+
+                            {item.source_hint && (
+                              <div className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
+                                Ref: <strong className="text-slate-700 dark:text-slate-300">{item.source_hint}</strong>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                            <button
+                              onClick={() => {
+                                setClaimInput(item.claim);
+                                setInputMode('text');
+                                setCurrentResult(null);
+                                window.scrollTo({ top: 180, behavior: 'smooth' });
+                                showToast('Loaded story into editor. Click "Verify Claim" to audit.', 'info');
+                                const el = document.getElementById('claim-editor');
+                                if (el) el.focus();
+                              }}
+                              className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-900 text-slate-700 hover:text-white dark:bg-slate-800 dark:hover:bg-white dark:text-slate-300 dark:hover:text-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                            >
+                              <Icon name="arrow-right" className="w-3.5 h-3.5" />
+                              <span>Load into Editor</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* TAB 2: KNOWLEDGE VAULT & LIVE NEWS ENGINE                */}
+            {/* ======================================================== */}
+            {activeTab === 'knowledge' && (
+              <div className="max-w-5xl w-full mx-auto space-y-8">
+                {/* Header & Main Controls */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Knowledge Vault & News Engine</h2>
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+                      Continuous real-time news retrieval, historical dataset training, and vector indexing.
+                    </p>
+                  </div>
+                  
+                  {/* Action Controls */}
+                  <div className="flex flex-wrap items-center gap-2.5 font-mono text-xs">
+                    <button
+                      onClick={handleSyncNews}
+                      disabled={syncingNews}
+                      className="px-4 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 font-bold flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                      title="Pull latest 24-hour news from Reuters, AP, BBC, and PolitiFact"
+                    >
+                      <Icon name="zap" className={`w-3.5 h-3.5 ${syncingNews ? 'animate-spin' : ''}`} />
+                      <span>{syncingNews ? 'Syncing...' : 'Sync Latest News'}</span>
+                    </button>
+
+                    <button
+                      onClick={handleTrainDataset}
+                      disabled={trainingDataset}
+                      className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 font-semibold flex items-center gap-2 transition-all disabled:opacity-50 shadow-sm"
+                      title="Train/index historical news from ISOT Reuters and PolitiFact datasets"
+                    >
+                      <Icon name="book" className={`w-3.5 h-3.5 ${trainingDataset ? 'animate-pulse' : ''}`} />
+                      <span>{trainingDataset ? 'Training...' : 'Train on News Dataset'}</span>
+                    </button>
+
+                    <button
+                      onClick={handleSeed}
+                      disabled={seeding}
+                      className="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-semibold flex items-center gap-2 transition-all disabled:opacity-50 shadow-sm"
+                    >
+                      <Icon name="sparkles" className="w-3.5 h-3.5" />
+                      <span>{seeding ? 'Seeding...' : 'Load Curated Dossiers'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 1. Automated Daily Live News Engine Card */}
+                <div className="surface-card rounded-2xl p-6 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-sans">
+                          Automated Daily News Stream & Ingestion Engine
+                        </h3>
+                      </div>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                        Monitors trusted global newsrooms & fact-checkers. Runs every 24 hours in the background.
+                      </p>
+                    </div>
+
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300">
+                      <span>24h Scheduler: Active</span>
+                    </span>
+                  </div>
+
+                  {/* Engine Stats Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                      <div className="text-slate-500 dark:text-slate-400">Live Articles</div>
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                        {newsStatus?.total_live_articles || 0}
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                      <div className="text-slate-500 dark:text-slate-400">News Chunks</div>
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                        {newsStatus?.total_news_chunks || 0}
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                      <div className="text-slate-500 dark:text-slate-400">Active RSS Feeds</div>
+                      <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                        {newsStatus?.active_sources?.length || 4}
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850">
+                      <div className="text-slate-500 dark:text-slate-400">Last Synced</div>
+                      <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1 truncate">
+                        {newsStatus?.last_sync || 'Recently'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Upload Document Card */}
+                <div className="surface-card rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-sans">Upload New Reference Dossier</h3>
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">Index PDF, TXT, or Markdown documents into the vector vault.</p>
+                    </div>
+                  </div>
+
+                  <label className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-500 dark:hover:border-slate-500 rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-slate-950/40">
+                    <Icon name="upload" className="w-8 h-8 text-slate-500 dark:text-slate-400" />
+                    <span className="text-base font-semibold text-slate-800 dark:text-slate-200">Click to upload document or drag and drop</span>
+                    <span className="text-xs text-slate-500 font-mono">PDF, TXT, MD (Max 10MB)</span>
+                    <input type="file" accept=".pdf,.txt,.md" className="hidden" onChange={handleFileUpload} />
+                  </label>
+                </div>
+
+                {/* 3. Indexed Documents Table */}
+                <div className="surface-card rounded-2xl p-6 space-y-5">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-sans flex items-center justify-between">
+                    <span>Indexed Knowledge Vault Documents ({documents.length})</span>
+                    <span className="text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400">{health?.indexed_chunks ?? 0} total chunks</span>
+                  </h3>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs sm:text-sm">
+                      <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
+                        <tr>
+                          <th className="pb-3 px-3 font-semibold">Document Title</th>
+                          <th className="pb-3 px-3 font-semibold">Category / Type</th>
+                          <th className="pb-3 px-3 font-semibold">Chunks</th>
+                          <th className="pb-3 px-3 font-semibold">Indexed On</th>
+                          <th className="pb-3 px-3 text-right font-semibold">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+                        {documents.map((doc) => (
+                          <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-850/40">
+                            <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white font-sans">{doc.title}</td>
+                            <td className="py-3 px-3">
+                              <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-medium">
+                                {doc.source_type}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 font-bold">{doc.chunks_count}</td>
+                            <td className="py-3 px-3 text-slate-500">{doc.created_at?.slice(0, 10)}</td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                onClick={() => handleDeleteDoc(doc.id, doc.title)}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                title="Delete document"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* TAB 3: AUDIT HISTORY                                     */}
+            {/* ======================================================== */}
+            {activeTab === 'history' && (
+              <div className="max-w-5xl w-full mx-auto space-y-6">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Fact-Checking Audit History</h2>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+                    Complete audit trail of all verified claims, confidence ratings, and evidence matches.
+                  </p>
+                </div>
+
+                <div className="surface-card rounded-2xl p-6">
+                  {history.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs sm:text-sm">
+                        <thead className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-mono">
+                          <tr>
+                            <th className="pb-3 px-3 font-semibold">Claim Statement</th>
+                            <th className="pb-3 px-3 font-semibold">Verdict</th>
+                            <th className="pb-3 px-3 font-semibold">Confidence</th>
+                            <th className="pb-3 px-3 font-semibold">Provider</th>
+                            <th className="pb-3 px-3 font-semibold">Timestamp</th>
+                            <th className="pb-3 px-3 text-right font-semibold">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300 font-mono">
+                          {history.map((h) => (
+                            <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-850/40">
+                              <td className="py-3 px-3 font-sans font-semibold text-slate-900 dark:text-white max-w-xs truncate">
+                                "{h.claim}"
+                              </td>
+                              <td className="py-3 px-3">
+                                <VerdictBadge verdict={h.verdict} size="sm" />
+                              </td>
+                              <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">{h.confidence_score}%</td>
+                              <td className="py-3 px-3 text-slate-500">{h.llm_provider}</td>
+                              <td className="py-3 px-3 text-slate-500">{h.created_at?.slice(0, 16)}</td>
+                              <td className="py-3 px-3 text-right">
+                                <button
+                                  onClick={() => {
+                                    setClaimInput(h.claim);
+                                    setActiveTab('verify');
+                                    setCurrentResult(null);
+                                    showToast('Loaded audit into editor. Click "Verify Claim" to audit.', 'info');
+                                    const el = document.getElementById('claim-editor');
+                                    if (el) el.focus();
+                                  }}
+                                  className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-all border border-slate-200 dark:border-slate-700 shadow-sm"
+                                >
+                                  Load
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-slate-500 font-mono text-sm">
+                      No audit history records found yet. Run your first claim verification above!
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* TAB 4: ANALYTICS & METRICS                               */}
+            {/* ======================================================== */}
+            {activeTab === 'analytics' && (
+              <div className="max-w-5xl w-full mx-auto space-y-6">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Verification Engine Analytics</h2>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+                    Telemetry, verdict distribution, and confidence ratings across all audited claims.
+                  </p>
+                </div>
+
+                {analytics && (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs sm:text-sm">
+                      <div className="p-5 rounded-2xl surface-card">
+                        <div className="text-slate-500 dark:text-slate-400">Total Audits</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.total_verifications}</div>
+                      </div>
+                      <div className="p-5 rounded-2xl surface-card">
+                        <div className="text-slate-500 dark:text-slate-400">Avg Confidence</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.avg_confidence}%</div>
+                      </div>
+                      <div className="p-5 rounded-2xl surface-card">
+                        <div className="text-slate-500 dark:text-slate-400">Avg Retr. Chunks</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{analytics.avg_sources_retrieved}</div>
+                      </div>
+                      <div className="p-5 rounded-2xl surface-card">
+                        <div className="text-slate-500 dark:text-slate-400">Total Chunks</div>
+                        <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">{health?.indexed_chunks ?? 0}</div>
+                      </div>
+                    </div>
+
+                    <div className="surface-card rounded-2xl p-8 flex flex-col items-center">
+                      <h3 className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-6">
+                        Verdict Distribution
+                      </h3>
+                      <div className="w-72 h-72">
+                        <canvas ref={chartRef}></canvas>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* TAB 5: SETTINGS & INFERENCE PROVIDER                     */}
+            {/* ======================================================== */}
+            {activeTab === 'settings' && (
+              <div className="max-w-3xl w-full mx-auto space-y-6">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white font-sans">Engine Configuration & Settings</h2>
+                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+                    Configure LLM reasoning provider, API keys, and retrieval parameters.
+                  </p>
+                </div>
+
+                <div className="surface-card rounded-2xl p-6 sm:p-8 space-y-6">
+                  <div>
+                    <label className="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                      LLM Reasoning Provider
+                    </label>
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => setSelectedProvider(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3.5 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-slate-600 text-sm font-mono shadow-inner"
+                    >
+                      <option value="fallback">Local Embedded Reasoner (Default, Zero-Latency, Offline)</option>
+                      <option value="openai">OpenAI (GPT-4o / GPT-4o-mini)</option>
+                      <option value="gemini">Google Gemini 1.5 Flash</option>
+                      <option value="groq">Groq (Llama 3 70B Fast)</option>
+                      <option value="ollama">Local Ollama (DeepSeek / Llama 3)</option>
+                    </select>
+                  </div>
+
+                  {selectedProvider !== 'fallback' && (
+                    <div>
+                      <label className="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                        API Key for {selectedProvider.toUpperCase()}
+                      </label>
+                      <input
+                        type="password"
+                        value={apiKeyInput}
+                        onChange={(e) => setApiKeyInput(e.target.value)}
+                        placeholder={`Enter your ${selectedProvider} API key...`}
+                        className="w-full bg-slate-50 dark:bg-slate-950 rounded-xl px-4 py-3.5 text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-800 focus:outline-none focus:border-slate-600 text-sm font-mono shadow-inner"
+                      />
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                    <button
+                      onClick={() => showToast('Settings saved successfully', 'success')}
+                      className="px-6 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 font-bold text-xs font-mono transition-all shadow-sm"
+                    >
+                      Save Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* Minimalist Footer */}
+          <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-white/60 dark:bg-slate-950/60 py-6 text-xs text-slate-500 font-mono mt-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200">TruthLens</span>
+                <span>— Explainable AI Fact Verification Platform</span>
+              </div>
+              <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400">
+                <span>RAG 2.0</span>
+                <span>•</span>
+                <span>ChromaDB Vector Vault</span>
+                <span>•</span>
+                <span>Hybrid Semantic Reranker</span>
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

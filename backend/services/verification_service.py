@@ -37,29 +37,14 @@ class VerificationService:
                 similarity_score=similar_match["similarity_score"]
             )
 
-        # Step 2: Check if knowledge base has documents
+        # Step 2: Check if knowledge base has documents and auto-seed if needed
         total_chunks_available = retrieval_service.count()
         if total_chunks_available == 0:
-            resp_data = {
-                "id": v_id,
-                "claim": claim,
-                "verdict": "INSUFFICIENT EVIDENCE",
-                "confidence_score": 10.0,
-                "explanation": "No documents are currently indexed in the knowledge base. Please upload documents or seed the knowledge base with trusted reference data to enable verification.",
-                "key_reasoning": "Knowledge base vector index is empty (0 indexed chunks).",
-                "supporting_evidence": [],
-                "contradicting_evidence": [],
-                "neutral_evidence": [],
-                "retrieved_sources": [],
-                "source_credibility_score": 0.0,
-                "evidence_agreement_score": 0.0,
-                "agreement_analysis": "No evidence available for cross-document agreement calculation.",
-                "similar_claim_found": similar_claim_obj,
-                "llm_provider_used": "Offline Safeguard",
-                "timestamp": timestamp
-            }
-            save_verification(resp_data)
-            return VerificationResponse(**resp_data)
+            try:
+                from backend.api.routes import seed_trusted_knowledge_base
+                seed_trusted_knowledge_base()
+            except Exception as e:
+                print(f"[VerificationService] Auto-seed notice: {e}")
 
         # Step 3: Semantic Vector Retrieval (Stage 1)
         candidate_chunks = retrieval_service.retrieve(claim, top_k=RETRIEVAL_TOP_K)
