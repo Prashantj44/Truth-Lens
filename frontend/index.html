@@ -124,6 +124,16 @@
           return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>;
         case 'zap':
           return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+        case 'link':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>;
+        case 'message':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
+        case 'copy':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>;
+        case 'share':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>;
+        case 'fire':
+          return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>;
         default:
           return null;
       }
@@ -271,6 +281,13 @@
       const [newsStatus, setNewsStatus] = useState(null);
       const [syncingNews, setSyncingNews] = useState(false);
       const [trainingDataset, setTrainingDataset] = useState(false);
+      const [inputMode, setInputMode] = useState('text'); // 'text' | 'url' | 'forward'
+      const [urlInput, setUrlInput] = useState('');
+      const [forwardInput, setForwardInput] = useState('');
+      const [extractingUrl, setExtractingUrl] = useState(false);
+      const [cleaningForward, setCleaningForward] = useState(false);
+      const [trendingClaims, setTrendingClaims] = useState([]);
+      const [trendingFilter, setTrendingFilter] = useState('ALL');
       const [health, setHealth] = useState({ indexed_chunks: 0 });
       const [seeding, setSeeding] = useState(false);
       const [historyModalItem, setHistoryModalItem] = useState(null);
@@ -294,9 +311,12 @@
         loadHistory();
         loadAnalytics();
         loadNewsStatus();
+        loadTrendingClaims();
 
         // Polling news status every 30s
-        const newsInterval = setInterval(loadNewsStatus, 30000);
+        const newsInterval = setInterval(() => {
+          loadNewsStatus();
+        }, 30000);
         return () => clearInterval(newsInterval);
       }, []);
 
@@ -350,6 +370,115 @@
         }
       };
 
+      const loadTrendingClaims = async () => {
+        try {
+          const res = await fetch('/api/news/trending');
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setTrendingClaims(data);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      // Handle URL Extraction & Verification
+      const handleVerifyUrl = async () => {
+        const u = urlInput.trim();
+        if (!u) {
+          showToast('Please enter an online news article URL.', 'error');
+          return;
+        }
+        setExtractingUrl(true);
+        showToast('Extracting core headline and claim from web link...', 'info');
+        try {
+          const res = await fetch('/api/news/extract-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: u })
+          });
+          const data = await res.json();
+          if (data.status === 'success' && data.extracted_claim) {
+            setClaimInput(data.extracted_claim);
+            setInputMode('text');
+            showToast(`Extracted headline: "${data.extracted_claim.slice(0, 60)}..."`, 'success');
+            handleVerify(data.extracted_claim);
+          } else {
+            showToast(data.message || 'Could not extract a readable claim from this URL.', 'error');
+          }
+        } catch (err) {
+          showToast('URL extraction failed: ' + err.message, 'error');
+        } finally {
+          setExtractingUrl(false);
+        }
+      };
+
+      // Handle WhatsApp / Viral Message Cleaning & Verification
+      const handleVerifyForward = async () => {
+        const text = forwardInput.trim();
+        if (!text) {
+          showToast('Please paste a WhatsApp forward or social media message.', 'error');
+          return;
+        }
+        setCleaningForward(true);
+        showToast('Cleaning forward headers & extracting factual claim...', 'info');
+        try {
+          const res = await fetch('/api/news/clean-forward', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+          });
+          const data = await res.json();
+          const clean = data.cleaned_claim || text;
+          setClaimInput(clean);
+          setInputMode('text');
+          showToast(`Cleaned viral text: "${clean.slice(0, 60)}..."`, 'success');
+          handleVerify(clean);
+        } catch (err) {
+          showToast('Forward cleaning failed: ' + err.message, 'error');
+        } finally {
+          setCleaningForward(false);
+        }
+      };
+
+      // 1-Click Copy Fact-Check Report for WhatsApp / Social Media
+      const handleCopyWhatsAppReport = (result) => {
+        if (!result) return;
+        const verdictEmoji = {
+          'SUPPORTED': '✅ [VERIFIED TRUE]',
+          'REFUTED': '❌ [DEBUNKED / FALSE]',
+          'MISLEADING': '⚠️ [MISLEADING / HALF-TRUTH]',
+          'INSUFFICIENT EVIDENCE': '❓ [UNVERIFIED / INSUFFICIENT EVIDENCE]'
+        }[result.verdict] || '🛡️ [FACT-CHECK]';
+
+        const sources = (result.retrieved_sources || []).map(s => s.source || s.document_name).join(', ') || 'TruthLens Authoritative Evidence Vault';
+
+        const text = 
+`🛡️ *TRUTHLENS FACT-CHECK AUDIT*
+━━━━━━━━━━━━━━━━━━━━
+📌 *Claim:* "${result.claim}"
+⚖️ *Verdict:* ${verdictEmoji}
+📊 *Confidence:* ${result.confidence_score}%
+
+💡 *Executive Rationale:*
+${result.explanation}
+
+${result.key_reasoning ? `🔍 *Key Evidence:* \n${result.key_reasoning}\n` : ''}
+📚 *Verified Against:* ${sources}
+━━━━━━━━━━━━━━━━━━━━
+_Verified via TruthLens Explainable RAG Fact-Checking Platform_`;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied Fact-Check Report to Clipboard for WhatsApp/Social Media!', 'success');
+          }).catch(() => {
+            showToast('Could not access clipboard.', 'error');
+          });
+        } else {
+          showToast('Clipboard not supported in this browser.', 'error');
+        }
+      };
+
       // Handle Live Daily News Sync
       const handleSyncNews = async () => {
         setSyncingNews(true);
@@ -365,6 +494,7 @@
           loadHealth();
           loadDocuments();
           loadNewsStatus();
+          loadTrendingClaims();
           loadAnalytics();
         } catch (err) {
           showToast('Live news sync failed: ' + err.message, 'error');
@@ -384,6 +514,7 @@
           loadHealth();
           loadDocuments();
           loadNewsStatus();
+          loadTrendingClaims();
           loadAnalytics();
         } catch (err) {
           showToast('Dataset training failed: ' + err.message, 'error');
@@ -630,57 +761,147 @@
                     Verify claims with verifiable evidence.
                   </h1>
                   <p className="text-zinc-400 text-base sm:text-lg leading-relaxed max-w-3xl mx-auto font-sans">
-                    Cross-examines factual claims against indexed authoritative documentation to generate explainable, evidence-backed verdicts.
+                    Cross-examines daily news, social media forwards, and online articles against indexed authoritative documentation to generate explainable, evidence-backed verdicts.
                   </p>
                 </div>
 
-                {/* Claim Input Box (Expansive width) */}
+                {/* Multi-Mode Input Box (Expansive width) */}
                 <div className="max-w-4xl mx-auto">
                   <div className="mono-card rounded-2xl p-6 sm:p-8 shadow-2xl relative border-zinc-800 focus-within:border-white transition-all">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-400 font-mono">
-                        <span className="uppercase tracking-widest font-semibold">Enter Claim or Statement</span>
-                        <span className="text-zinc-500">Press Ctrl + Enter to verify</span>
-                      </div>
-                      <textarea
-                        rows={3}
-                        value={claimInput}
-                        onChange={(e) => setClaimInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            handleVerify();
-                          }
-                        }}
-                        placeholder="e.g. Narendra Modi is the Prime Minister of India..."
-                        className="w-full bg-black rounded-xl px-5 py-4 text-zinc-100 placeholder-zinc-600 border border-zinc-800 focus:outline-none focus:border-white text-lg resize-none font-sans"
-                      />
-                      
-                      <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-                        <div className="flex items-center gap-2 text-xs sm:text-sm font-mono text-zinc-400">
-                          <span className="w-2 h-2 rounded-full bg-white"></span>
-                          <span>Inference Engine: <strong className="text-zinc-200">{selectedProvider.toUpperCase()}</strong></span>
-                        </div>
-
+                    
+                    {/* Input Mode Selector */}
+                    <div className="flex items-center gap-2 mb-5 pb-4 border-b border-zinc-850 text-xs sm:text-sm font-mono">
+                      {[
+                        { id: 'text', label: 'Direct Claim / Text', icon: 'shield' },
+                        { id: 'url', label: 'News Article URL', icon: 'link' },
+                        { id: 'forward', label: 'WhatsApp / Viral Forward', icon: 'message' },
+                      ].map((m) => (
                         <button
-                          onClick={() => handleVerify()}
-                          disabled={verifying}
-                          className="px-8 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-sm sm:text-base shadow-[0_0_25px_rgba(255,255,255,0.18)] active:scale-[0.98] transition-all flex items-center gap-2.5 disabled:opacity-50 font-mono"
+                          key={m.id}
+                          onClick={() => setInputMode(m.id)}
+                          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl transition-all ${
+                            inputMode === m.id
+                              ? 'bg-white text-black font-bold shadow-sm'
+                              : 'text-zinc-400 hover:text-white bg-zinc-950 border border-zinc-850 hover:border-zinc-700'
+                          }`}
                         >
-                          {verifying ? (
-                            <>
-                              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-black" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-                              <span>Verifying Evidence...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Verify Statement</span>
-                              <Icon name="arrow-right" className="w-4 h-4" />
-                            </>
-                          )}
+                          <Icon name={m.icon} className="w-3.5 h-3.5" />
+                          <span>{m.label}</span>
                         </button>
-                      </div>
+                      ))}
                     </div>
+
+                    {/* Mode 1: Direct Text Input */}
+                    {inputMode === 'text' && (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-400 font-mono">
+                          <span className="uppercase tracking-widest font-semibold">Enter Claim or Statement</span>
+                          <span className="text-zinc-500">Press Ctrl + Enter to verify</span>
+                        </div>
+                        <textarea
+                          rows={3}
+                          value={claimInput}
+                          onChange={(e) => setClaimInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              handleVerify();
+                            }
+                          }}
+                          placeholder="e.g. Narendra Modi is the Prime Minister of India..."
+                          className="w-full bg-black rounded-xl px-5 py-4 text-zinc-100 placeholder-zinc-600 border border-zinc-800 focus:outline-none focus:border-white text-lg resize-none font-sans"
+                        />
+                        
+                        <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                          <div className="flex items-center gap-2 text-xs sm:text-sm font-mono text-zinc-400">
+                            <span className="w-2 h-2 rounded-full bg-white"></span>
+                            <span>Inference Engine: <strong className="text-zinc-200">{selectedProvider.toUpperCase()}</strong></span>
+                          </div>
+
+                          <button
+                            onClick={() => handleVerify()}
+                            disabled={verifying}
+                            className="px-8 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-sm sm:text-base shadow-[0_0_25px_rgba(255,255,255,0.18)] active:scale-[0.98] transition-all flex items-center gap-2.5 disabled:opacity-50 font-mono"
+                          >
+                            {verifying ? (
+                              <>
+                                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-black" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                                <span>Verifying Evidence...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Verify Statement</span>
+                                <Icon name="arrow-right" className="w-4 h-4" />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mode 2: Online News Link / URL Scanner */}
+                    {inputMode === 'url' && (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-400 font-mono">
+                          <span className="uppercase tracking-widest font-semibold">Paste News Article Web Link</span>
+                          <span className="text-zinc-500">Fetches headline & checks evidence</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <input
+                            type="url"
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleVerifyUrl();
+                              }
+                            }}
+                            placeholder="https://www.reuters.com/world/... or https://apnews.com/..."
+                            className="flex-1 bg-black rounded-xl px-5 py-3.5 text-zinc-100 placeholder-zinc-600 border border-zinc-800 focus:outline-none focus:border-white text-base font-mono"
+                          />
+                          <button
+                            onClick={handleVerifyUrl}
+                            disabled={extractingUrl || verifying}
+                            className="px-6 py-3.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 font-mono whitespace-nowrap"
+                          >
+                            <Icon name="link" className="w-4 h-4" />
+                            <span>{extractingUrl ? 'Extracting...' : 'Extract & Verify Link'}</span>
+                          </button>
+                        </div>
+                        <p className="text-xs text-zinc-500 font-mono">
+                          TruthLens will parse the online web page, extract the core reported claim, and match it against the evidence vault.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Mode 3: WhatsApp Forward / Viral Rumor Cleaner */}
+                    {inputMode === 'forward' && (
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between text-xs sm:text-sm text-zinc-400 font-mono">
+                          <span className="uppercase tracking-widest font-semibold">Paste Viral Message / WhatsApp Forward</span>
+                          <span className="text-zinc-500">Auto-cleans headers & clickbait</span>
+                        </div>
+                        <textarea
+                          rows={3}
+                          value={forwardInput}
+                          onChange={(e) => setForwardInput(e.target.value)}
+                          placeholder="Paste full WhatsApp message here: e.g. 'Forwarded as received: Breaking news! WHO announces that... Share to 10 groups!'"
+                          className="w-full bg-black rounded-xl px-5 py-4 text-zinc-100 placeholder-zinc-600 border border-zinc-800 focus:outline-none focus:border-white text-base resize-none font-sans"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handleVerifyForward}
+                            disabled={cleaningForward || verifying}
+                            className="px-8 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-bold text-xs sm:text-sm shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 font-mono"
+                          >
+                            <Icon name="message" className="w-4 h-4" />
+                            <span>{cleaningForward ? 'Cleaning & Parsing...' : 'Clean & Verify Forward'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
 
                   {/* Suggestion Chips */}
@@ -691,6 +912,7 @@
                         key={idx}
                         onClick={() => {
                           setClaimInput(claim);
+                          setInputMode('text');
                           handleVerify(claim);
                         }}
                         className="px-3.5 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-850 hover:border-zinc-700 transition-colors text-left font-mono"
@@ -700,6 +922,92 @@
                     ))}
                   </div>
                 </div>
+
+                {/* ======================================================== */}
+                {/* TODAY'S TRENDING NEWS & VIRAL CLAIMS SCANNER             */}
+                {/* ======================================================== */}
+                <div className="max-w-6xl mx-auto space-y-6 pt-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Icon name="fire" className="w-5 h-5 text-white" />
+                        <h2 className="text-2xl sm:text-3xl font-bold text-white font-sans">
+                          Today's Trending News & Viral Rumors
+                        </h2>
+                      </div>
+                      <p className="text-sm text-zinc-400 font-mono mt-1">
+                        Live scanner of active news stories and circulating claims. Click to verify factual accuracy with 1 click.
+                      </p>
+                    </div>
+
+                    {/* Category Filter Pills */}
+                    <div className="flex flex-wrap items-center gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800 text-xs font-mono">
+                      {['ALL', 'POLITICS', 'ECONOMY', 'HEALTH', 'TECHNOLOGY', 'MYTH', 'LIVE NEWS'].map((cat) => (
+                        <button
+                          key={cat}
+                          onClick={() => setTrendingFilter(cat)}
+                          className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                            trendingFilter === cat
+                              ? 'bg-white text-black font-bold'
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Trending Claims Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {trendingClaims
+                      .filter(item => trendingFilter === 'ALL' || item.badge === trendingFilter || item.category?.includes(trendingFilter))
+                      .slice(0, 9)
+                      .map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="mono-card rounded-2xl p-5 flex flex-col justify-between hover:border-zinc-600 transition-all group"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-zinc-850 text-xs font-mono">
+                              <span className="px-2.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300 font-bold text-[10px]">
+                                {item.badge || item.category}
+                              </span>
+                              <span className="text-zinc-500 text-[11px] truncate max-w-[120px]">
+                                {item.viral_level || 'Viral Story'}
+                              </span>
+                            </div>
+
+                            <p className="text-sm sm:text-base font-semibold text-zinc-200 leading-snug font-sans group-hover:text-white transition-colors">
+                              "{item.claim}"
+                            </p>
+
+                            {item.source_hint && (
+                              <div className="text-xs text-zinc-500 font-mono mt-2.5 truncate">
+                                Reference: <strong className="text-zinc-400">{item.source_hint}</strong>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-4 mt-4 border-t border-zinc-900 flex justify-end">
+                            <button
+                              onClick={() => {
+                                setClaimInput(item.claim);
+                                setInputMode('text');
+                                handleVerify(item.claim);
+                                window.scrollTo({ top: 400, behavior: 'smooth' });
+                              }}
+                              className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-white text-zinc-300 hover:text-black border border-zinc-800 hover:border-white text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                            >
+                              <Icon name="zap" className="w-3.5 h-3.5" />
+                              <span>Check Authenticity</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
 
                 {/* Live Progress Pipeline */}
                 {verifying && (
@@ -803,6 +1111,25 @@
                           <div className="w-full bg-zinc-900 rounded-full h-2 mt-4 overflow-hidden">
                             <div className="bg-zinc-400 h-full rounded-full" style={{ width: `${currentResult.evidence_agreement_score}%` }}></div>
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Share / WhatsApp Report Action Bar */}
+                      <div className="mt-8 pt-6 border-t border-zinc-850 flex flex-wrap items-center justify-between gap-4 font-mono">
+                        <div className="flex items-center gap-2 text-xs text-zinc-400">
+                          <Icon name="shield" className="w-4 h-4 text-white" />
+                          <span>Debunked & Verified with TruthLens Evidence Vault</span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleCopyWhatsAppReport(currentResult)}
+                            className="px-4 py-2 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+                            title="Copy structured summary to share on WhatsApp or social media"
+                          >
+                            <Icon name="copy" className="w-3.5 h-3.5" />
+                            <span>Copy WhatsApp / Social Report</span>
+                          </button>
                         </div>
                       </div>
                     </div>

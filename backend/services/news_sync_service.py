@@ -365,6 +365,182 @@ class NewsSyncService:
                 logger.error(f"[NewsSyncService] Error in daily scheduler loop: {e}")
                 await asyncio.sleep(300)
 
+    def clean_viral_message(self, raw_text: str) -> str:
+        """
+        Cleans common social media/WhatsApp forward headers, boilerplate, and clickbait phrases.
+        """
+        if not raw_text:
+            return ""
+
+        text = raw_text.strip()
+        patterns = [
+            r"^(forwarded\s+(as\s+received|message|many\s+times)?[:\s\-]*)",
+            r"^(fwd[:\s\-]*)",
+            r"^(breaking\s+(news|alert)?[:\s\-\!]*)",
+            r"^(urgent\s+(alert|notice|update|news)?[:\s\-\!]*)",
+            r"^(viral\s+(video|audio|claim|news|message)?[:\s\-\!]*)",
+            r"^(shocking\s+news[:\s\-\!]*)",
+            r"^(alert[:\s\-\!]*)",
+            r"^(flash\s+news[:\s\-\!]*)",
+            r"^(important\s+message[:\s\-\!]*)",
+            r"^(please\s+share\s+to\s+(everyone|all|groups)?[:\s\-\!]*)",
+            r"^(share\s+to\s+\d+\s+(people|groups)?[:\s\-\!]*)",
+            r"^(read\s+before\s+it\s+gets\s+deleted[:\s\-\!]*)"
+        ]
+
+        # Iteratively strip prefixes until no more match
+        changed = True
+        iterations = 0
+        while changed and iterations < 10:
+            iterations += 1
+            old_text = text
+            for pat in patterns:
+                text = re.sub(pat, "", text, flags=re.IGNORECASE).strip()
+            # Strip leading/trailing punctuation and symbols
+            text = re.sub(r"^[\s:!?,.\-–—|~*#]+", "", text).strip()
+            if text == old_text:
+                changed = False
+
+        # Remove trailing share/forward requests
+        text = re.sub(r"(please\s+)?(forward|share)\s+(this|to\s+all|to\s+\d+|with\s+everyone|with\s+all|in\s+every\s+group).*", "", text, flags=re.IGNORECASE).strip()
+        # Clean trailing punctuation
+        text = re.sub(r"[\s\-–—|~*#]+$", "", text).strip()
+
+        # Clean multiple spaces and newlines
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def extract_claim_from_url(self, url: str) -> Dict[str, Any]:
+        """
+        Fetches web page content from a news link and extracts the core headline/claim.
+        """
+        url = url.strip()
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = "https://" + url
+
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=12) as res:
+                raw_html = res.read().decode("utf-8", errors="ignore")
+
+            # Extract title
+            title_match = re.search(r"<title[^>]*>(.*?)</title>", raw_html, re.IGNORECASE | re.DOTALL)
+            og_title_match = re.search(r'<meta\s+property=["\']og:title["\']\s+content=["\'](.*?)["\']', raw_html, re.IGNORECASE)
+            og_desc_match = re.search(r'<meta\s+property=["\']og:description["\']\s+content=["\'](.*?)["\']', raw_html, re.IGNORECASE)
+            h1_match = re.search(r"<h1[^>]*>(.*?)</h1>", raw_html, re.IGNORECASE | re.DOTALL)
+
+            title = og_title_match.group(1) if og_title_match else (title_match.group(1) if title_match else (h1_match.group(1) if h1_match else ""))
+            description = og_desc_match.group(1) if og_desc_match else ""
+
+            # Clean extracted text
+            title = self.clean_html(title)
+            # Remove site name suffix e.g. "Headline - Reuters" or "Headline | BBC News"
+            title = re.sub(r"\s*[-|–—]\s*(reuters|bbc|ap|cnn|fox|the hindu|times of india|nytimes|the guardian|bloomberg|wikipedia).*$", "", title, flags=re.IGNORECASE).strip()
+            description = self.clean_html(description)
+
+            claim_text = title if title else (description[:160] if description else "Online news report")
+
+            return {
+                "status": "success",
+                "extracted_claim": claim_text,
+                "title": title,
+                "description": description[:300],
+                "url": url
+            }
+
+        except Exception as e:
+            logger.warning(f"[NewsSyncService] Failed to extract from URL {url}: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to fetch content from URL: {str(e)}",
+                "extracted_claim": "",
+                "url": url
+            }
+
+    def get_trending_daily_claims(self) -> List[Dict[str, Any]]:
+        """
+        Returns today's active news stories & viral claims for 1-click verification.
+        Combines live RSS news with categorized daily trending topics.
+        """
+        curated_trending = [
+            {
+                "claim": "Narendra Modi is the Prime Minister of India.",
+                "category": "WORLD LEADERS",
+                "source_hint": "Official Government / UN Records",
+                "viral_level": "High Daily Query",
+                "badge": "POLITICS"
+            },
+            {
+                "claim": "Renewable energy accounts for over 30 percent of global electricity.",
+                "category": "CLIMATE & ENERGY",
+                "source_hint": "IEA & Global Electricity Review 2024",
+                "viral_level": "Trending",
+                "badge": "ENERGY"
+            },
+            {
+                "claim": "India is the third largest economy in the world.",
+                "category": "ECONOMY & MARKETS",
+                "source_hint": "IMF World Economic Outlook / World Bank",
+                "viral_level": "Viral Claim",
+                "badge": "ECONOMY"
+            },
+            {
+                "claim": "Antibiotics can cure viral infections like the flu.",
+                "category": "HEALTH & MEDICAL",
+                "source_hint": "World Health Organization & CDC",
+                "viral_level": "Common Myth",
+                "badge": "HEALTH"
+            },
+            {
+                "claim": "Frontier AI training compute has doubled roughly every 5-6 months since 2010.",
+                "category": "TECH & AI",
+                "source_hint": "Stanford AI Index & Epoch AI",
+                "viral_level": "Industry Fact",
+                "badge": "TECHNOLOGY"
+            },
+            {
+                "claim": "COVID-19 mRNA vaccines alter human DNA.",
+                "category": "HEALTH & SCIENCE",
+                "source_hint": "WHO & Peer-Reviewed Medical Literature",
+                "viral_level": "Viral Rumor",
+                "badge": "HEALTH"
+            },
+            {
+                "claim": "Flying saucers were discovered in the lost city of Atlantis.",
+                "category": "VIRAL CONSPIRACY",
+                "source_hint": "Archaeological & Historical Archives",
+                "viral_level": "Myth",
+                "badge": "MYTH"
+            },
+            {
+                "claim": "US GDP exceeds 28 trillion dollars in 2025.",
+                "category": "GLOBAL FINANCE",
+                "source_hint": "IMF & US Bureau of Economic Analysis",
+                "viral_level": "Fact Check",
+                "badge": "FINANCE"
+            }
+        ]
+
+        # Prepend latest live RSS headlines if available
+        recent = get_recent_news_articles(limit=5)
+        live_items = []
+        for art in recent:
+            live_items.append({
+                "claim": art["title"],
+                "category": art.get("category", "BREAKING NEWS"),
+                "source_hint": art.get("source_name", "Global News Wire"),
+                "viral_level": "Today's News",
+                "badge": "LIVE NEWS"
+            })
+
+        return live_items + curated_trending
+
     def get_status(self) -> Dict[str, Any]:
         """Return real-time scheduler health and stats."""
         stats = get_news_stats()
@@ -384,3 +560,4 @@ class NewsSyncService:
 
 # Global Singleton Instance
 news_sync_service = NewsSyncService()
+

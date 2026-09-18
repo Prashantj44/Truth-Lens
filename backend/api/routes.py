@@ -215,3 +215,33 @@ def train_on_existing_news_dataset(max_articles: int = 100):
     result = news_sync_service.train_on_existing_news_dataset(max_articles=max_articles)
     return result
 
+@router.get("/news/trending")
+def get_daily_trending_claims():
+    """
+    Returns today's active news stories and viral claims for 1-click verification.
+    """
+    return news_sync_service.get_trending_daily_claims()
+
+@router.post("/news/extract-url")
+def extract_claim_from_news_url(payload: dict):
+    """
+    Extracts the main headline and core claim from an online news link.
+    """
+    url = payload.get("url", "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="Please provide a valid URL.")
+    result = news_sync_service.extract_claim_from_url(url)
+    return result
+
+@router.post("/news/clean-forward")
+def clean_social_forward_message(payload: dict):
+    """
+    Cleans viral WhatsApp forward boilerplate and extracts the verifiable factual claim.
+    """
+    text = payload.get("text", "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Please provide message text.")
+    cleaned = news_sync_service.clean_viral_message(text)
+    return {"cleaned_claim": cleaned, "original_length": len(text), "cleaned_length": len(cleaned)}
+
+
