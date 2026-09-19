@@ -18,12 +18,15 @@ class NLIEvaluator:
             for attempt in range(3):
                 try:
                     print(f"[NLIEvaluator] Loading NLI model (Attempt {attempt+1}/3)...")
-                    self._model = CrossEncoder('cross-encoder/nli-deberta-v3-base')
+                    try:
+                        self._model = CrossEncoder('cross-encoder/nli-deberta-v3-base', local_files_only=True)
+                    except Exception:
+                        self._model = CrossEncoder('cross-encoder/nli-deberta-v3-base')
                     print("[NLIEvaluator] NLI model loaded successfully.")
                     return
                 except Exception as e:
                     print(f"[NLIEvaluator] Error loading NLI model: {e}")
-                    time.sleep(2)
+                    time.sleep(1)
             
             print("[NLIEvaluator] Failed to load NLI model after 3 attempts.")
             self._model = "fallback"

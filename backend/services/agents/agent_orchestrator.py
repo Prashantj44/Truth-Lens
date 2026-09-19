@@ -61,11 +61,23 @@ class AgentOrchestrator:
 
         chunk_classifications = []
 
+        # Extract core content terms from claim for entity grounding
+        stopwords = {'is', 'the', 'of', 'in', 'a', 'an', 'and', 'to', 'are', 'was', 'were', 'it', 'that', 'this', 'for', 'on', 'with', 'at', 'by', 'from', 'be', 'as', 'or', 'who', 'what', 'where', 'when', 'why', 'how'}
+        claim_terms = [w.lower().strip("?,.!'\"") for w in claim.split() if w.lower().strip("?,.!'\"") not in stopwords and len(w.strip("?,.!'\"")) > 2]
+
         for chunk in chunks:
             text = chunk.get("text", "")
             eval_result = nli_evaluator.evaluate_stance(claim, text)
             stance = eval_result["stance"]
             rationale = eval_result["rationale"]
+
+            # Entity Grounding Safeguard: If NLI flags contradiction, verify that the chunk actually mentions at least one claim entity
+            if stance == "CONTRADICTING" and claim_terms:
+                chunk_lower = text.lower()
+                has_entity_overlap = any(term in chunk_lower for term in claim_terms)
+                if not has_entity_overlap:
+                    stance = "NEUTRAL"
+                    rationale = "Context lacks entity overlap with claim; demoted from contradiction to neutral."
 
             chunk["stance"] = stance
             chunk_classifications.append({

@@ -6,6 +6,7 @@ class EvidenceChunk(BaseModel):
     document_name: str
     source: str
     source_type: str = "General"
+    url: Optional[str] = None
     page_number: Optional[int] = 1
     text: str
     relevance_score: float = 0.0
@@ -49,11 +50,23 @@ class DocumentItem(BaseModel):
     id: str
     filename: str
     source: str
+    title: Optional[str] = None
     source_type: str
     file_type: str
     upload_date: str
+    created_at: Optional[str] = None
     number_of_chunks: int
+    chunks_count: Optional[int] = None
     processing_status: str
+
+    def __init__(self, **data):
+        if "title" not in data or not data["title"]:
+            data["title"] = data.get("source") or data.get("filename", "Untitled")
+        if "chunks_count" not in data or data["chunks_count"] is None:
+            data["chunks_count"] = data.get("number_of_chunks", 0)
+        if "created_at" not in data or not data["created_at"]:
+            data["created_at"] = data.get("upload_date", "")
+        super().__init__(**data)
 
 class AnalyticsData(BaseModel):
     total_claims_verified: int

@@ -27,6 +27,16 @@ from backend.services.news_sync_service import news_sync_service
 
 router = APIRouter(prefix="/api")
 
+@router.get("/health")
+def api_health_check():
+    """Returns the real-time health and count of indexed evidence chunks."""
+    from backend.services.retrieval_service import retrieval_service
+    return {
+        "status": "healthy",
+        "service": "TruthLens Fact Verification Engine",
+        "indexed_chunks": retrieval_service.count()
+    }
+
 @router.post("/verify", response_model=VerificationResponse)
 def verify_claim(request: ClaimVerificationRequest):
     """

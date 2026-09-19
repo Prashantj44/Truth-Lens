@@ -18,12 +18,15 @@ class LocalReranker:
             for attempt in range(3):
                 try:
                     print(f"[LocalReranker] Loading Re-ranker (Attempt {attempt+1}/3)...")
-                    self._model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
+                    try:
+                        self._model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', local_files_only=True)
+                    except Exception:
+                        self._model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
                     print("[LocalReranker] Re-ranker loaded successfully.")
                     return
                 except Exception as e:
                     print(f"[LocalReranker] Error loading re-ranker model: {e}")
-                    time.sleep(2)
+                    time.sleep(1)
             
             print("[LocalReranker] Failed to load Re-ranker after 3 attempts.")
             self._model = "fallback"
