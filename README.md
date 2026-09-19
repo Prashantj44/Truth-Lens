@@ -167,3 +167,31 @@ To keep the system **100% Free and Local** without hitting Vercel's size limits,
 <div align="center">
   <p><i>Truth is not a narrative. It is a verifiable state.</i></p>
 </div>
+
+---
+
+## ? Installation & Quickstart
+
+### 1. Clone the Repository
+`ash
+git clone https://github.com/Prashantj44/Truth-Lens.git
+cd Truth-Lens
+`
+
+### 2. Install Dependencies
+`ash
+pip install -r requirements.txt
+`
+
+### 3. Launch TruthLens Engine (Local FastAPI Server)
+`ash
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+`
+
+### 4. Open in Browser
+Open **http://127.0.0.1:8000** in your browser to access the complete application.
+
+---
+
+## ?? License
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
