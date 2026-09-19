@@ -9,9 +9,9 @@
 [![License](https://img.shields.io/badge/License-MIT-black?style=flat-square)](LICENSE)
 [![Deployment](https://img.shields.io/badge/Deployment-Local%20%7C%20Docker-black?style=flat-square&logo=docker)](https://docker.com/)
 
-**See the Truth Behind Every Claim — Evidence-Grounded, Explainable, and Real-Time.**
+**See the Truth Behind Every Claim &mdash; Evidence-Grounded, Explainable, and Real-Time.**
 
-[Live Architecture](#-system-architecture) • [Why TruthLens is Unique](#-why-truthlens-is-unique) • [V.o.2 Updates](#-vo2-massive-architecture-upgrade) • [API Reference](#-api-specification)
+[Live Architecture](#-system-architecture) &bull; [Why TruthLens is Unique](#-why-truthlens-is-unique) &bull; [V.o.2 Updates](#-vo2-massive-architecture-upgrade) &bull; [API Reference](#-api-specification) &bull; [Installation](#-installation--quickstart)
 
 </div>
 
@@ -23,16 +23,14 @@
 
 The system ingests real-time global news feeds, historical ground-truth archives (ISOT Reuters & PolitiFact LIAR), and curated reference dossiers. When presented with a claim, news URL, or viral WhatsApp forward, TruthLens searches its vector database, queries live web sources, reranks retrieved evidence using Cross-Encoder neural models, and synthesizes a verifiable verdict with complete source attribution using zero-shot Natural Language Inference (NLI).
 
-```text
-                                  ┌─────────────────────────────┐
-                                  │   4 EXPLAINABLE VERDICTS    │
-                                  ├─────────────────────────────┤
-                                  │  ✅ SUPPORTED               │
-                                  │  ❌ CONTRADICTED            │
-                                  │  ⚠️ MISLEADING              │
-                                  │  ❓ INSUFFICIENT EVIDENCE   │
-                                  └─────────────────────────────┘
-```
+### Core Explainable Verdicts
+
+| Verdict | Definition & Criteria |
+| :--- | :--- |
+| ✅ **SUPPORTED** | Authoritative evidence directly verifies and confirms the claim. |
+| ❌ **CONTRADICTED** | Authoritative sources directly refute or disprove the factual assertions. |
+| ⚠️ **MISLEADING** | The claim is partially factual but omits critical context, exaggerates, or misrepresents facts. |
+| ❓ **INSUFFICIENT EVIDENCE** | No authoritative ground truth is found in evidence databases or real-time indexes. |
 
 ---
 
@@ -168,7 +166,7 @@ Open **`http://127.0.0.1:8000`** in your browser to access the complete applicat
 ---
 
 ## 📄 License
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License &mdash; see the [LICENSE](LICENSE) file for details.
 
 ---
 <div align="center">
