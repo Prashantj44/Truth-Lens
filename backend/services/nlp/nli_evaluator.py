@@ -31,6 +31,27 @@ class NLIEvaluator:
             print("[NLIEvaluator] Failed to load NLI model after 3 attempts.")
             self._model = "fallback"
 
+    def _normalize_claim(self, claim: str) -> str:
+        """
+        Converts question-form claims into declarative assertions so that NLI models
+        evaluate factual entailment instead of demoting questions to Neutral.
+        e.g., 'Is Narendra Modi PM of India' -> 'Narendra Modi is PM of India'
+              'Is the moon made of green cheese' -> 'the moon is made of green cheese'
+        """
+        c = claim.strip().rstrip('?.! ')
+        words = c.split()
+        if words and words[0].lower() in {'is', 'was', 'are', 'were', 'does', 'did', 'do', 'can', 'could', 'will', 'would', 'should', 'has', 'have', 'had'}:
+            verb = words[0].lower()
+            rest = words[1:]
+            if verb in {'is', 'was', 'are', 'were'} and verb not in [w.lower() for w in rest]:
+                if len(rest) >= 2:
+                    if rest[0].lower() in {'the', 'a', 'an'} and len(rest) >= 3:
+                        return f"{rest[0]} {rest[1]} {verb} {' '.join(rest[2:])}".strip()
+                    return f"{rest[0]} {rest[1]} {verb} {' '.join(rest[2:])}".strip()
+                return f"{' '.join(rest)} {verb}"
+            return ' '.join(rest)
+        return c
+
     def evaluate_stance(self, claim: str, evidence_text: str) -> Dict[str, Any]:
         """
         Evaluates the stance of evidence_text towards the claim using the NLI model.
@@ -46,10 +67,11 @@ class NLIEvaluator:
             return {"stance": "NEUTRAL", "score": 0.5, "rationale": "Fallback mode active."}
 
         try:
+            hypothesis = self._normalize_claim(claim)
             # NLI model requires (Premise, Hypothesis)
             # Premise = Evidence Text
-            # Hypothesis = Claim
-            scores = self._model.predict([(evidence_text, claim)])[0]
+            # Hypothesis = Declarative Claim Assertion
+            scores = self._model.predict([(evidence_text, hypothesis)])[0]
             
             # Convert logits to probabilities
             exp_scores = np.exp(scores - np.max(scores))
