@@ -121,6 +121,44 @@ class AgentOrchestrator:
         """
         Main entry point for the orchestrator.
         """
+        # --- VERCEL SERVERLESS FALLBACK ---
+        if os.environ.get("VERCEL") == "1":
+            from backend.services.llm_service import llm_service
+            # In Vercel, we can't run local PyTorch models.
+            # Route to cloud LLM APIs directly.
+            
+            # Fast live-search
+            instructions = self._router_analyze(claim)
+            chunks = self._researcher_gather(claim, instructions)
+            
+            evidence_text = ""
+            for i, c in enumerate(chunks[:5]):
+                evidence_text += f"[Source {i+1}]: {c.get('text', '')}\n"
+                
+            if not evidence_text:
+                return {
+                    "verdict": "INSUFFICIENT EVIDENCE",
+                    "confidence_score": 0,
+                    "summary": "No evidence was found for this claim.",
+                    "evidence": {"supporting_chunks": [], "contradicting_chunks": [], "neutral_chunks": []},
+                    "llm_provider_used": "Vercel API Fallback"
+                }
+                
+            llm_result = llm_service.evaluate_claim(claim, evidence_text)
+            
+            return {
+                "verdict": llm_result.get("verdict", "INSUFFICIENT EVIDENCE"),
+                "confidence_score": llm_result.get("confidence_score", 0),
+                "summary": llm_result.get("explanation", ""),
+                "evidence": {
+                    "supporting_chunks": chunks[:2],
+                    "contradicting_chunks": [],
+                    "neutral_chunks": []
+                },
+                "llm_provider_used": "Cloud LLM (Vercel Production)"
+            }
+        # ----------------------------------
+
         instructions = self._router_analyze(claim)
         chunks = self._researcher_gather(claim, instructions)
         
