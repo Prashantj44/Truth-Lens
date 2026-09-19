@@ -544,7 +544,7 @@
                   { id: 'knowledge', label: 'Knowledge Vault', icon: 'database' },
                   { id: 'history', label: 'Audit History', icon: 'history' },
                   { id: 'analytics', label: 'Analytics', icon: 'chart' },
-                  { id: 'settings', label: 'Settings', icon: 'settings' },
+                  
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -1071,30 +1071,7 @@
 
             {/* ======================================================== */}
             {/* TAB 5: SETTINGS                                          */}
-            {/* ======================================================== */}
-            {activeTab === 'settings' && (
-              <div className="max-w-2xl mx-auto space-y-6">
-                <div>
-                  <h2 className="text-3xl font-bold text-white tracking-tight">Engine Configuration</h2>
-                  <p className="text-zinc-400 text-sm mt-1">Local & serverless verification parameters.</p>
-                </div>
-
-                <div className="p-6 rounded-3xl apogee-card space-y-4 font-mono text-xs">
-                  <div className="space-y-2">
-                    <label className="text-zinc-400">Current AI Pipeline</label>
-                    <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 text-white font-semibold">
-                      Language Model Task Agents (LMTA) + Local MS-MARCO Reranker + DeBERTa v3 NLI
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-zinc-400">Deployment State</label>
-                    <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 text-zinc-300">
-                      Local Offline Mode (100% Free, Zero Cloud Invocations)
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            
 
           </main>
 
