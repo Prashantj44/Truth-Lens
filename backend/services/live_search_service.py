@@ -33,22 +33,18 @@ class LiveSearchService:
 
     def extract_search_phrases(self, query: str) -> List[str]:
         cleaned = self.clean_and_correct_query(query)
-        phrases = [cleaned]
         
-        # Extract potential subject phrase before linking verbs
-        match = re.split(r'\b(?:is in|is located in|is the|was the|are in|serves as|became|can cure|cure|causes)\b', cleaned, flags=re.IGNORECASE)
-        if len(match) > 1:
-            subj = match[0].strip()
-            if len(subj) > 3 and subj not in phrases:
-                phrases.append(subj)
-                
-            pred = match[1].strip()
-            if len(pred) > 3:
-                combined = f"{subj} {pred}".strip()
-                if combined not in phrases:
-                    phrases.append(combined)
+        # Remove question words at the start
+        cleaned_no_q = re.sub(r'^(Is|Are|Was|Were|Did|Do|Does|Can|Could|Who|What|Where|When|Why|How)\b\s+', '', cleaned, flags=re.IGNORECASE)
+        phrases = [cleaned_no_q]
+        
+        # Extract potential named entities (capitalized word sequences)
+        entities = re.findall(r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)', cleaned)
+        for ent in entities:
+            if len(ent) > 3 and ent not in phrases:
+                phrases.append(ent)
 
-        # Remove filler words
+        # Fallback keyword extraction
         stopwords = {"is", "are", "was", "were", "in", "on", "at", "the", "a", "an", "of", "and", "or", "to", "for", "by", "with", "from", "that", "this"}
         tokens = [w for w in re.findall(r'\b[a-zA-Z0-9]{3,}\b', cleaned) if w.lower() not in stopwords]
         if tokens:
@@ -66,51 +62,50 @@ class LiveSearchService:
         evidence_chunks: List[Dict[str, Any]] = []
         seen_titles = set()
 
-        # 1. Wikipedia OpenSearch & Summary API
+        # 1. Wikipedia Full-Text Search & Summary API
         for phrase in search_phrases:
             if len(evidence_chunks) >= max_results:
                 break
             try:
-                opensearch_url = f"https://en.wikipedia.org/w/api.php?action=opensearch&search={urllib.parse.quote(phrase)}&limit=3&namespace=0&format=json"
-                req = urllib.request.Request(opensearch_url, headers=self.headers)
+                search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(phrase)}&utf8=&format=json&srlimit=3"
+                req = urllib.request.Request(search_url, headers=self.headers)
                 with urllib.request.urlopen(req, timeout=4) as response:
                     data = json.loads(response.read().decode('utf-8'))
-                    if len(data) >= 2 and data[1]:
-                        titles = data[1]
-                        urls = data[3] if len(data) >= 4 else []
+                    search_results = data.get('query', {}).get('search', [])
+                    
+                    for result in search_results:
+                        title = result.get('title')
+                        if not title or title.lower() in seen_titles:
+                            continue
+                        seen_titles.add(title.lower())
 
-                        for i, title in enumerate(titles):
-                            if title.lower() in seen_titles:
-                                continue
-                            seen_titles.add(title.lower())
-
-                            # Fetch summary extract
-                            encoded_title = urllib.parse.quote(title.replace(' ', '_'))
-                            summary_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{encoded_title}"
-                            req_sum = urllib.request.Request(summary_url, headers=self.headers)
-                            try:
-                                with urllib.request.urlopen(req_sum, timeout=4) as s_resp:
-                                    s_data = json.loads(s_resp.read().decode('utf-8'))
-                                    extract = s_data.get('extract', '')
-                                    if extract and len(extract.strip()) > 30:
-                                        chunk_id = f"live-wiki-{abs(hash(title)) % 100000}"
-                                        page_url = urls[i] if i < len(urls) else f"https://en.wikipedia.org/wiki/{encoded_title}"
-                                        
-                                        evidence_chunks.append({
-                                            "chunk_id": chunk_id,
-                                            "document_name": f"Wikipedia: {title}",
-                                            "source": f"Wikipedia Global Encyclopedia ({title})",
-                                            "source_type": "Encyclopedia / Official Reference",
-                                            "page_number": 1,
-                                            "text": extract,
-                                            "credibility_score": 0.92,
-                                            "url": page_url,
-                                            "is_live_retrieved": True
-                                        })
-                                        if len(evidence_chunks) >= max_results:
-                                            break
-                            except Exception:
-                                continue
+                        # Fetch summary extract
+                        encoded_title = urllib.parse.quote(title.replace(' ', '_'))
+                        summary_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{encoded_title}"
+                        req_sum = urllib.request.Request(summary_url, headers=self.headers)
+                        try:
+                            with urllib.request.urlopen(req_sum, timeout=4) as s_resp:
+                                s_data = json.loads(s_resp.read().decode('utf-8'))
+                                extract = s_data.get('extract', '')
+                                if extract and len(extract.strip()) > 30:
+                                    chunk_id = f"live-wiki-{abs(hash(title)) % 100000}"
+                                    page_url = f"https://en.wikipedia.org/wiki/{encoded_title}"
+                                    
+                                    evidence_chunks.append({
+                                        "chunk_id": chunk_id,
+                                        "document_name": f"Wikipedia: {title}",
+                                        "source": f"Wikipedia Global Encyclopedia ({title})",
+                                        "source_type": "Encyclopedia / Official Reference",
+                                        "page_number": 1,
+                                        "text": extract,
+                                        "credibility_score": 0.92,
+                                        "url": page_url,
+                                        "is_live_retrieved": True
+                                    })
+                                    if len(evidence_chunks) >= max_results:
+                                        break
+                        except Exception:
+                            continue
             except Exception:
                 continue
 

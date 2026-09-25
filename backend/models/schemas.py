@@ -15,6 +15,7 @@ class EvidenceChunk(BaseModel):
 
 class ClaimVerificationRequest(BaseModel):
     claim: str = Field(..., min_length=3, description="The claim or headline to verify")
+    context_text: Optional[str] = Field(None, description="Direct article context provided by a client app (like Echo News) to improve accuracy")
     llm_provider: Optional[str] = Field("auto", description="auto, gemini, groq, openai, ollama, offline")
     api_key: Optional[str] = Field(None, description="Optional custom API key for this request")
     confidence_threshold: Optional[float] = Field(0.5, ge=0.0, le=1.0)

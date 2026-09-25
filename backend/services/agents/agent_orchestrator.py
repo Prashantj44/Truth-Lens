@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from backend.services.retrieval_service import retrieval_service
 from backend.services.live_search_service import live_search_service
 from backend.services.nlp.nli_evaluator import nli_evaluator
@@ -71,13 +71,14 @@ class AgentOrchestrator:
             stance = eval_result["stance"]
             rationale = eval_result["rationale"]
 
-            # Entity Grounding Safeguard: If NLI flags contradiction, verify that the chunk actually mentions at least one claim entity
-            if stance == "CONTRADICTING" and claim_terms:
+            # Entity Grounding Safeguard: Ensure the chunk shares significant vocabulary with the claim
+            if stance in ["CONTRADICTING", "SUPPORTING"] and claim_terms:
                 chunk_lower = text.lower()
-                has_entity_overlap = any(term in chunk_lower for term in claim_terms)
-                if not has_entity_overlap:
+                overlap_count = sum(1 for term in claim_terms if term in chunk_lower)
+                # Require at least 2 overlapping terms or 30% of the claim terms (prevents false matches on single common words)
+                if overlap_count < 2 and overlap_count < len(claim_terms) * 0.3:
                     stance = "NEUTRAL"
-                    rationale = "Context lacks entity overlap with claim; demoted from contradiction to neutral."
+                    rationale = f"Context lacks sufficient entity overlap ({overlap_count}/{len(claim_terms)} terms); demoted to neutral."
 
             chunk["stance"] = stance
             chunk_classifications.append({
@@ -104,12 +105,12 @@ class AgentOrchestrator:
         elif len(contradicting_chunks) > 0 and len(supporting_chunks) == 0:
             verdict = "CONTRADICTED"
             confidence = min(99.0, 80.0 + len(contradicting_chunks) * 5.0)
-            explanation = "The claim is refuted by the retrieved evidence."
+            explanation = f"The claim is refuted by the retrieved evidence. The most relevant source states: \"{contradicting_chunks[0]['text'][:150]}...\""
             key_reasoning = f"NLI detected {len(contradicting_chunks)} contradictory source(s)."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) == 0:
             verdict = "SUPPORTED"
             confidence = min(99.0, 80.0 + len(supporting_chunks) * 5.0)
-            explanation = "The claim is corroborated by the retrieved evidence."
+            explanation = f"The claim is corroborated by the retrieved evidence. The primary source confirms: \"{supporting_chunks[0]['text'][:150]}...\""
             key_reasoning = f"NLI detected {len(supporting_chunks)} supporting source(s)."
         else:
             verdict = "MISLEADING"
@@ -129,7 +130,7 @@ class AgentOrchestrator:
             "top_chunks": chunks
         }
 
-    def process_claim(self, claim: str) -> Dict[str, Any]:
+    def process_claim(self, claim: str, context_text: Optional[str] = None) -> Dict[str, Any]:
         """
         Main entry point for the orchestrator.
         """
@@ -174,6 +175,19 @@ class AgentOrchestrator:
         instructions = self._router_analyze(claim)
         chunks = self._researcher_gather(claim, instructions)
         
+        # Inject the Echo News (Client App) Context directly into the pool with maximum credibility
+        if context_text and len(context_text.strip()) > 20:
+            chunks.insert(0, {
+                "chunk_id": f"client-context-{abs(hash(context_text)) % 100000}",
+                "document_name": "Source Article from Echo News",
+                "source": "Directly Supplied Context from Client",
+                "source_type": "Direct Client Context",
+                "text": context_text,
+                "credibility_score": 100.0,
+                "relevance_score": 100.0,
+                "is_live_retrieved": True
+            })
+            
         # Deduplicate chunks based on text
         seen_texts = set()
         unique_chunks = []

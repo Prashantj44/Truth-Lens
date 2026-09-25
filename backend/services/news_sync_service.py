@@ -71,6 +71,8 @@ class NewsSyncService:
             return ""
         clean = re.sub(r'<[^>]+>', ' ', raw_html)
         clean = re.sub(r'&[a-zA-Z0-9#]+;', ' ', clean)
+        # Remove common news domain artifacts (e.g. yahoo.com, apnews.com)
+        clean = re.sub(r'\b[a-zA-Z0-9-]+\.(com|org|net|co\.uk|news)\b', '', clean, flags=re.IGNORECASE)
         clean = re.sub(r'\s+', ' ', clean).strip()
         return clean
 
@@ -108,7 +110,7 @@ class NewsSyncService:
                 if not title:
                     continue
 
-                full_content = f"HEADLINE: {title}\nSUMMARY: {desc}\nPUBLISHED: {pub_date}\nSOURCE: {source_name}"
+                full_content = f"{title}. {desc}"
 
                 articles.append({
                     "title": title,

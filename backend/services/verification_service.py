@@ -48,7 +48,7 @@ class VerificationService:
 
         # Delegate entire RAG and NLP logic to the new Agent Orchestrator
         from backend.services.agents.agent_orchestrator import agent_orchestrator
-        orchestrator_result = agent_orchestrator.process_claim(claim)
+        orchestrator_result = agent_orchestrator.process_claim(claim, request.context_text)
 
         # Map back to models
         supporting = [EvidenceChunk(**c) for c in orchestrator_result.get("supporting_chunks", [])]
