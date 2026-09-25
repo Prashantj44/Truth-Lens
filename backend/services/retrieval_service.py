@@ -151,16 +151,53 @@ class RetrievalService:
                 "relevance_score": round(sim, 4)
             })
 
+        # Fallback to SQLite news & trusted corpus if in-memory and ChromaDB have no items
+        if not scored:
+            try:
+                from backend.database.db import get_recent_news_articles
+                news_items = get_recent_news_articles(limit=60)
+                for item in news_items:
+                    headline = item.get("title", "")
+                    body = item.get("summary") or item.get("content") or ""
+                    full_text = f"{headline}. {body}".strip()
+                    if not full_text:
+                        continue
+                    item_emb = embedding_service.embed_query(full_text)
+                    sim = embedding_service.cosine_similarity(query_embedding, item_emb)
+                    scored.append({
+                        "chunk_id": f"news_{item.get('id', '')}",
+                        "document_name": item.get("source", "Trusted News"),
+                        "source": item.get("url") or item.get("source", "Trusted News Feed"),
+                        "source_type": item.get("category", "Live News"),
+                        "page_number": 1,
+                        "text": full_text,
+                        "relevance_score": round(sim, 4)
+                    })
+            except Exception as e:
+                print(f"[RetrievalService] SQLite news fallback retrieval error: {e}")
+
         scored.sort(key=lambda x: x["relevance_score"], reverse=True)
         return scored[:top_k]
 
     def count(self) -> int:
-        """Returns total number of chunks indexed."""
+        """Returns total number of chunks indexed across vector store and database."""
         if self._collection is not None:
             try:
-                return self._collection.count()
+                cnt = self._collection.count()
+                if cnt > 0:
+                    return cnt
             except Exception:
                 pass
+        if self._memory_chunks:
+            return len(self._memory_chunks)
+        try:
+            from backend.database.db import get_news_stats
+            stats = get_news_stats()
+            total = stats.get("total_news_chunks", 0) or stats.get("total_articles", 0)
+            if total > 0:
+                return total
+        except Exception:
+            pass
         return len(self._memory_chunks)
 
 retrieval_service = RetrievalService()

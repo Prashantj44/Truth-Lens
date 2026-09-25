@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from backend.api.routes import router as api_router, seed_trusted_knowledge_base
 from backend.services.retrieval_service import retrieval_service
@@ -63,6 +63,33 @@ def health_check():
         "service": "TruthLens Fact Verification Engine",
         "indexed_chunks": retrieval_service.count()
     }
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def get_favicon_ico():
+    base_dirs = [Path(__file__).resolve().parent.parent / "public", Path(__file__).resolve().parent.parent / "frontend", Path(__file__).resolve().parent.parent]
+    for d in base_dirs:
+        p = d / "favicon.ico"
+        if p.exists():
+            return FileResponse(str(p), media_type="image/x-icon")
+    return Response(status_code=204)
+
+@app.get("/favicon.svg", include_in_schema=False)
+async def get_favicon_svg():
+    base_dirs = [Path(__file__).resolve().parent.parent / "public", Path(__file__).resolve().parent.parent / "frontend", Path(__file__).resolve().parent.parent]
+    for d in base_dirs:
+        p = d / "favicon.svg"
+        if p.exists():
+            return FileResponse(str(p), media_type="image/svg+xml")
+    return Response(status_code=204)
+
+@app.get("/favicon.png", include_in_schema=False)
+async def get_favicon_png():
+    base_dirs = [Path(__file__).resolve().parent.parent / "public", Path(__file__).resolve().parent.parent / "frontend", Path(__file__).resolve().parent.parent]
+    for d in base_dirs:
+        p = d / "favicon.png"
+        if p.exists():
+            return FileResponse(str(p), media_type="image/png")
+    return Response(status_code=204)
 
 # Serve Frontend Single-Page Application
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
