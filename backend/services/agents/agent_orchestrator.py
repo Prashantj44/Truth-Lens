@@ -145,7 +145,8 @@ class AgentOrchestrator:
                 return {
                     "verdict": "INSUFFICIENT EVIDENCE",
                     "confidence_score": 0,
-                    "summary": "No verified evidence was found for this claim.",
+                    "explanation": "No verified evidence was found for this claim.",
+                    "key_reasoning": "Vector index returned 0 relevant chunks.",
                     "evidence": {"supporting_chunks": [], "contradicting_chunks": [], "neutral_chunks": []},
                     "llm_provider_used": "Vercel API Fallback"
                 }
@@ -170,12 +171,14 @@ class AgentOrchestrator:
             return {
                 "verdict": llm_result.get("verdict", "INSUFFICIENT EVIDENCE"),
                 "confidence_score": llm_result.get("confidence_score", 0),
-                "summary": llm_result.get("explanation", ""),
+                "explanation": llm_result.get("explanation", ""),
+                "key_reasoning": llm_result.get("key_reasoning", ""),
                 "evidence": {
                     "supporting_chunks": supporting,
                     "contradicting_chunks": contradicting,
                     "neutral_chunks": neutral
                 },
+                "top_chunks": chunks,
                 "llm_provider_used": llm_result.get("llm_provider_used", "Cloud LLM (Vercel Production)")
             }
         # ----------------------------------

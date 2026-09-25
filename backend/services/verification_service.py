@@ -71,11 +71,16 @@ class VerificationService:
                     "document_name": c.get("document_name", s_name),
                     "source": s_name,
                     "source_type": c.get("source_type", "General"),
+                    "url": c.get("url", ""),
                     "credibility_score": round(cred_val * 100, 1),
                     "pages": [p_num]
                 }
             elif p_num not in sources_dict[s_name]["pages"]:
                 sources_dict[s_name]["pages"].append(p_num)
+            
+            # If a source already existed but was missing URL, update it
+            if not sources_dict[s_name].get("url") and c.get("url"):
+                sources_dict[s_name]["url"] = c.get("url")
 
         retrieved_sources_list = list(sources_dict.values())
         for s in retrieved_sources_list:

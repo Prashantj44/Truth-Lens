@@ -47,7 +47,8 @@ class RetrievalService:
             "document_name": c["document_name"],
             "source": c["source"],
             "source_type": c.get("source_type", "General"),
-            "page_number": int(c.get("page_number", 1))
+            "page_number": int(c.get("page_number", 1)),
+            "url": c.get("url", "")
         } for c in chunks]
 
         # Try ChromaDB first
@@ -129,6 +130,7 @@ class RetrievalService:
                             "source": meta.get("source", "Unknown"),
                             "source_type": meta.get("source_type", "General"),
                             "page_number": int(meta.get("page_number", 1)),
+                            "url": meta.get("url", ""),
                             "text": doc_text,
                             "relevance_score": round(similarity, 4)
                         })
@@ -147,6 +149,7 @@ class RetrievalService:
                 "source": meta.get("source", "Unknown"),
                 "source_type": meta.get("source_type", "General"),
                 "page_number": int(meta.get("page_number", 1)),
+                "url": meta.get("url", ""),
                 "text": item["text"],
                 "relevance_score": round(sim, 4)
             })
@@ -167,9 +170,10 @@ class RetrievalService:
                     scored.append({
                         "chunk_id": f"news_{item.get('id', '')}",
                         "document_name": item.get("source", "Trusted News"),
-                        "source": item.get("url") or item.get("source", "Trusted News Feed"),
+                        "source": item.get("source", "Trusted News Feed"),
                         "source_type": item.get("category", "Live News"),
                         "page_number": 1,
+                        "url": item.get("url", ""),
                         "text": full_text,
                         "relevance_score": round(sim, 4)
                     })

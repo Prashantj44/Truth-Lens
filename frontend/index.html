@@ -1003,15 +1003,38 @@
                             <span>Authenticated Evidence Sources ({currentResult.retrieved_sources.length})</span>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {currentResult.retrieved_sources.map((src, idx) => (
-                              <span 
-                                key={idx} 
-                                className="px-3 py-1 rounded-full border border-white/20 bg-white/5 text-xs font-mono text-zinc-200 flex items-center gap-1.5"
-                              >
-                                <span>🏛️ {src.source || src.document_name}</span>
-                                <span className="text-zinc-500">({src.credibility_score}%)</span>
-                              </span>
-                            ))}
+                            {currentResult.retrieved_sources.map((src, idx) => {
+                              const Content = () => (
+                                <>
+                                  <span className="text-[10px] tracking-widest text-emerald-400 uppercase mr-1 border-r border-white/20 pr-1.5">{src.source_type || 'News'}</span>
+                                  <span>{src.source || src.document_name}</span>
+                                  <span className="text-zinc-500 font-sans ml-1 text-[10px]">({src.credibility_score}% Confidence)</span>
+                                  {src.url && <span className="ml-1 opacity-50 group-hover:opacity-100 transition-opacity">↗</span>}
+                                </>
+                              );
+                              
+                              const baseClasses = "group px-3 py-1.5 rounded border bg-zinc-900/50 text-xs font-mono text-zinc-200 flex items-center transition-all duration-200";
+                              
+                              if (src.url) {
+                                return (
+                                  <a 
+                                    key={idx}
+                                    href={src.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`${baseClasses} border-emerald-500/20 hover:border-emerald-500/50 hover:bg-emerald-500/5`}
+                                  >
+                                    <Content />
+                                  </a>
+                                );
+                              }
+                              
+                              return (
+                                <span key={idx} className={`${baseClasses} border-white/10`}>
+                                  <Content />
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
