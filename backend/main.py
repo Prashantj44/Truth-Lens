@@ -27,31 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.middleware("http")
-async def vercel_path_rewrite_middleware(request: Request, call_next):
-    """
-    On Vercel, serverless internal rewrites map /api/(.*) to /api/index.py.
-    Vercel sets the original requested route in headers (x-matched-path, x-rewrite-path, x-invoke-path).
-    This middleware restores the true path so FastAPI routers can match it accurately.
-    """
-    matched = (
-        request.headers.get("x-matched-path") or
-        request.headers.get("x-rewrite-path") or
-        request.headers.get("x-invoke-path") or
-        request.headers.get("x-original-uri")
-    )
-    if matched:
-        clean = matched.split("?")[0]
-        if not clean.endswith(".py"):
-            request.scope["path"] = clean
-            request.scope["raw_path"] = clean.encode("utf-8")
-    elif request.scope.get("path", "").endswith("/index.py"):
-        clean = request.scope["path"].replace("/index.py", "")
-        if clean:
-            request.scope["path"] = clean
-            request.scope["raw_path"] = clean.encode("utf-8")
-            
-    return await call_next(request)
 
 # Include API endpoints
 app.include_router(api_router)
