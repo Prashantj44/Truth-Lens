@@ -546,7 +546,7 @@ class NewsSyncService:
     def get_status(self) -> Dict[str, Any]:
         """Return real-time scheduler health and stats."""
         stats = get_news_stats()
-        recent = get_recent_news_articles(limit=20)
+        recent = get_recent_news_articles(limit=50)
         
         return {
             "is_scheduler_running": self.is_running,

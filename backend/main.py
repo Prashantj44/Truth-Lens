@@ -1,7 +1,7 @@
 import asyncio
 import os
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response
@@ -26,6 +26,32 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def vercel_path_rewrite_middleware(request: Request, call_next):
+    """
+    On Vercel, serverless internal rewrites map /api/(.*) to /api/index.py.
+    Vercel sets the original requested route in headers (x-matched-path, x-rewrite-path, x-invoke-path).
+    This middleware restores the true path so FastAPI routers can match it accurately.
+    """
+    matched = (
+        request.headers.get("x-matched-path") or
+        request.headers.get("x-rewrite-path") or
+        request.headers.get("x-invoke-path") or
+        request.headers.get("x-original-uri")
+    )
+    if matched:
+        clean = matched.split("?")[0]
+        if not clean.endswith(".py"):
+            request.scope["path"] = clean
+            request.scope["raw_path"] = clean.encode("utf-8")
+    elif request.scope.get("path", "").endswith("/index.py"):
+        clean = request.scope["path"].replace("/index.py", "")
+        if clean:
+            request.scope["path"] = clean
+            request.scope["raw_path"] = clean.encode("utf-8")
+            
+    return await call_next(request)
 
 # Include API endpoints
 app.include_router(api_router)
@@ -114,7 +140,7 @@ elif (FRONTEND_DIR / "index.html").exists():
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         if full_path.startswith("api/") or full_path == "docs" or full_path == "openapi.json" or full_path == "health":
-            return
+            raise HTTPException(status_code=404, detail=f"API endpoint '/{full_path}' not found")
         file_path = FRONTEND_DIR / full_path
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))

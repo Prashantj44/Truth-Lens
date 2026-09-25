@@ -137,38 +137,46 @@ class AgentOrchestrator:
         # --- VERCEL SERVERLESS FALLBACK ---
         if os.environ.get("VERCEL") == "1":
             from backend.services.llm_service import llm_service
-            # In Vercel, we can't run local PyTorch models.
-            # Route to cloud LLM APIs directly.
-            
-            # Fast live-search
+            # In Vercel, route to cloud LLM APIs or built-in NLI engine
             instructions = self._router_analyze(claim)
             chunks = self._researcher_gather(claim, instructions)
             
-            evidence_text = ""
-            for i, c in enumerate(chunks[:5]):
-                evidence_text += f"[Source {i+1}]: {c.get('text', '')}\n"
-                
-            if not evidence_text:
+            if not chunks:
                 return {
                     "verdict": "INSUFFICIENT EVIDENCE",
                     "confidence_score": 0,
-                    "summary": "No evidence was found for this claim.",
+                    "summary": "No verified evidence was found for this claim.",
                     "evidence": {"supporting_chunks": [], "contradicting_chunks": [], "neutral_chunks": []},
                     "llm_provider_used": "Vercel API Fallback"
                 }
                 
-            llm_result = llm_service.evaluate_claim(claim, evidence_text)
+            llm_result = llm_service.verify_with_llm(claim, chunks)
             
+            supporting = []
+            contradicting = []
+            neutral = []
+            for cls in llm_result.get("chunk_classifications", []):
+                matched_c = next((c for c in chunks if c.get("chunk_id") == cls.get("chunk_id")), None)
+                if matched_c:
+                    if cls.get("stance") == "SUPPORTING":
+                        supporting.append(matched_c)
+                    elif cls.get("stance") == "CONTRADICTING":
+                        contradicting.append(matched_c)
+                    else:
+                        neutral.append(matched_c)
+            if not supporting and not contradicting:
+                supporting = chunks[:2]
+                
             return {
                 "verdict": llm_result.get("verdict", "INSUFFICIENT EVIDENCE"),
                 "confidence_score": llm_result.get("confidence_score", 0),
                 "summary": llm_result.get("explanation", ""),
                 "evidence": {
-                    "supporting_chunks": chunks[:2],
-                    "contradicting_chunks": [],
-                    "neutral_chunks": []
+                    "supporting_chunks": supporting,
+                    "contradicting_chunks": contradicting,
+                    "neutral_chunks": neutral
                 },
-                "llm_provider_used": "Cloud LLM (Vercel Production)"
+                "llm_provider_used": llm_result.get("llm_provider_used", "Cloud LLM (Vercel Production)")
             }
         # ----------------------------------
 

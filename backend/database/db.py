@@ -3,14 +3,41 @@ import json
 import uuid
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from backend.config import DB_PATH
+import shutil
+from backend.config import DB_PATH, IS_VERCEL, BASE_DIR
+
+def ensure_db_ready():
+    if IS_VERCEL:
+        bundled = BASE_DIR / "backend" / "database" / "truthlens.db"
+        if bundled.exists():
+            should_copy = False
+            if not DB_PATH.exists() or DB_PATH.stat().st_size < 100000:
+                should_copy = True
+            else:
+                try:
+                    c = sqlite3.connect(str(DB_PATH))
+                    cnt = c.cursor().execute("SELECT count(*) FROM daily_news_articles").fetchone()[0]
+                    c.close()
+                    if cnt == 0:
+                        should_copy = True
+                except Exception:
+                    should_copy = True
+            if should_copy:
+                try:
+                    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy(bundled, DB_PATH)
+                    print(f"[TruthLens] Seeded {DB_PATH} from bundled repository database.")
+                except Exception as e:
+                    print(f"[TruthLens] DB seed notice: {e}")
 
 def get_connection():
+    ensure_db_ready()
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
+    ensure_db_ready()
     conn = get_connection()
     cursor = conn.cursor()
     

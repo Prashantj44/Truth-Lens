@@ -40,6 +40,16 @@ Return ONLY a valid JSON object matching this schema:
 """
 
 class LLMService:
+    def evaluate_claim(self, claim: str, evidence_text: str) -> Dict[str, Any]:
+        """Convenience method to evaluate a claim against raw evidence text."""
+        fake_chunks = [{
+            "chunk_id": "c1",
+            "text": evidence_text,
+            "source": "Live Verified Evidence",
+            "source_type": "Live Web / Intelligence"
+        }]
+        return self.verify_with_llm(claim, fake_chunks)
+
     def verify_with_llm(
         self,
         claim: str,
