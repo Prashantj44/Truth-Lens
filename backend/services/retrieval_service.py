@@ -2,7 +2,13 @@ import os
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from backend.config import CHROMA_PERSIST_DIR, CHROMA_COLLECTION_NAME, RETRIEVAL_TOP_K
+from backend.config import (
+    CHROMA_PERSIST_DIR, 
+    CHROMA_COLLECTION_NAME, 
+    RETRIEVAL_TOP_K, 
+    SIMILARITY_THRESHOLD, 
+    SOURCE_CREDIBILITY_WEIGHTS
+)
 from backend.services.embedding_service import embedding_service
 
 class RetrievalService:
@@ -104,6 +110,13 @@ class RetrievalService:
         if not query or not query.strip():
             return []
 
+        def get_cred_score(source_type: str) -> float:
+            st_lower = source_type.lower()
+            for key, weight in SOURCE_CREDIBILITY_WEIGHTS.items():
+                if key in st_lower:
+                    return weight
+            return 0.70
+
         query_embedding = embedding_service.embed_query(query)
 
         # Query ChromaDB if active
@@ -121,20 +134,30 @@ class RetrievalService:
                         dist = results["distances"][0][idx] if "distances" in results else 0.5
                         # Cosine distance to similarity: sim = 1.0 - (dist / 2) or max(0, 1.0 - dist)
                         similarity = max(0.0, min(1.0, 1.0 - float(dist)))
+                        
+                        if similarity < SIMILARITY_THRESHOLD:
+                            continue
+
                         meta = results["metadatas"][0][idx]
                         doc_text = results["documents"][0][idx]
+                        
+                        source_type = meta.get("source_type", "General")
+                        cred_score = float(meta.get("credibility_score", get_cred_score(source_type)))
 
                         retrieved.append({
                             "chunk_id": meta.get("chunk_id", ""),
                             "document_name": meta.get("document_name", "Unknown"),
                             "source": meta.get("source", "Unknown"),
-                            "source_type": meta.get("source_type", "General"),
+                            "source_type": source_type,
                             "page_number": int(meta.get("page_number", 1)),
                             "url": meta.get("url", ""),
+                            "credibility_score": cred_score,
                             "text": doc_text,
                             "relevance_score": round(similarity, 4)
                         })
-                return retrieved
+                
+                retrieved.sort(key=lambda x: x["relevance_score"], reverse=True)
+                return retrieved[:top_k]
             except Exception as e:
                 print(f"[RetrievalService] ChromaDB query error: {e}. Trying in-memory store.")
 
@@ -142,14 +165,21 @@ class RetrievalService:
         scored = []
         for item in self._memory_chunks:
             sim = embedding_service.cosine_similarity(query_embedding, item["embedding"])
+            if sim < SIMILARITY_THRESHOLD:
+                continue
+                
             meta = item["metadata"]
+            source_type = meta.get("source_type", "General")
+            cred_score = float(meta.get("credibility_score", get_cred_score(source_type)))
+            
             scored.append({
                 "chunk_id": meta.get("chunk_id", ""),
                 "document_name": meta.get("document_name", "Unknown"),
                 "source": meta.get("source", "Unknown"),
-                "source_type": meta.get("source_type", "General"),
+                "source_type": source_type,
                 "page_number": int(meta.get("page_number", 1)),
                 "url": meta.get("url", ""),
+                "credibility_score": cred_score,
                 "text": item["text"],
                 "relevance_score": round(sim, 4)
             })
@@ -167,13 +197,20 @@ class RetrievalService:
                         continue
                     item_emb = embedding_service.embed_query(full_text)
                     sim = embedding_service.cosine_similarity(query_embedding, item_emb)
+                    if sim < SIMILARITY_THRESHOLD:
+                        continue
+                        
+                    source_type = item.get("category", "Live News")
+                    cred_score = float(item.get("credibility", get_cred_score(source_type)))
+                    
                     scored.append({
                         "chunk_id": f"news_{item.get('id', '')}",
                         "document_name": item.get("source", "Trusted News"),
                         "source": item.get("source", "Trusted News Feed"),
-                        "source_type": item.get("category", "Live News"),
+                        "source_type": source_type,
                         "page_number": 1,
                         "url": item.get("url", ""),
+                        "credibility_score": cred_score,
                         "text": full_text,
                         "relevance_score": round(sim, 4)
                     })
