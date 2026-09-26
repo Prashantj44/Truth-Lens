@@ -289,7 +289,9 @@ class LLMService:
             "zero biological activity", "cannot treat", "cannot cure", "ineffective", 
             "has not overtaken", "not overtake", "not become", "remains in fifth", 
             "contraindicated", "no biological activity", "zero activity", "not effective",
-            "not cure"
+            "not cure", "myth", "hoax", "proverb", "fable", "misconception", "falsehood",
+            "conspiracy theory", "satire", "fictional", "joke", "urban legend",
+            "disproved", "debunked", "untrue", "fake news", "not true", "false"
         ]
 
         total_claim_kw = len(claim_content_words)
@@ -386,12 +388,6 @@ class LLMService:
                                 continue
                         except Exception:
                             pass
-                        
-                        if is_unique_role_claim:
-                             stance = "CONTRADICTING"
-                             rationale = "Text mentions the role and the subject, but syntactic analysis suggests a different entity holds the role."
-                             contradicting_chunks.append(chunk)
-                        else:
                              stance = "SUPPORTING"
                              rationale = "Directly corroborates both the subject and the asserted role/action."
                              supporting_chunks.append(chunk)
