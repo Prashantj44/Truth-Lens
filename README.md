@@ -21,7 +21,7 @@
 
 **TruthLens** is a specialized, production-grade fact-verification platform built on an explainable Retrieval-Augmented Generation (RAG) architecture. Unlike generic conversational chatbots that are prone to hallucinations, TruthLens acts as an impartial, evidence-bound verification engine.
 
-The system ingests real-time global news feeds, historical ground-truth archives (ISOT Reuters & PolitiFact LIAR), and curated reference dossiers. When presented with a claim, news URL, or viral WhatsApp forward, TruthLens searches its vector database, queries live web sources, reranks retrieved evidence using Cross-Encoder neural models, and synthesizes a verifiable verdict with complete source attribution using zero-shot Natural Language Inference (NLI).
+The system integrates live Wikipedia search APIs and leverages state-of-the-art Cloud LLMs (Gemini, Groq, OpenAI) to perform advanced semantic reasoning. When presented with a claim, TruthLens dynamically gathers real-time articles, filters the context, and synthesizes a verifiable verdict with complete source attribution. For high-availability, it includes a deterministic pure-Python offline engine that guarantees verification uptime even without API keys.
 
 ### Core Explainable Verdicts
 
@@ -36,7 +36,7 @@ The system ingests real-time global news feeds, historical ground-truth archives
 
 ## 🚀 V.o.2 Massive Architecture Upgrade
 
-Version 0.2 marks a complete paradigm shift for TruthLens. We have stripped out brittle heuristics and replaced them with a state-of-the-art **Language Model Task Agents (LMTA)** framework powered by deterministic, local neural networks. Every component is now backed by deep learning, ensuring semantic understanding without relying on costly external LLM APIs.
+Version 0.2 marks a complete paradigm shift for TruthLens. We have transitioned the project from heavy local PyTorch dependencies (like ChromaDB and MS-MARCO) to a highly scalable **Serverless API architecture** built for edge deployment (e.g., Vercel). By routing heavy reasoning tasks to specialized Cloud LLMs, TruthLens achieves higher fidelity entailment analysis while maintaining a pristine, minimal runtime footprint.
 
 ### 1. Multi-Agent Orchestration (LMTA)
 - **Router Agent:** Evaluates the claim's complexity and dynamically routes searches to the Local Vault, Live Web (DuckDuckGo), or Wikipedia.
