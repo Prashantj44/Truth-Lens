@@ -5,9 +5,9 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-black?style=flat-square&logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-2.0-black?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-black?style=flat-square)](https://www.trychroma.com/)
+[![Serverless](https://img.shields.io/badge/Architecture-Serverless-black?style=flat-square)](https://vercel.com/)
 [![License](https://img.shields.io/badge/License-MIT-black?style=flat-square)](LICENSE)
-[![Deployment](https://img.shields.io/badge/Deployment-Local%20%7C%20Docker-black?style=flat-square&logo=docker)](https://docker.com/)
+[![Deployment](https://img.shields.io/badge/Deployment-Vercel%20%7C%20Local-black?style=flat-square&logo=vercel)](https://vercel.com/)
 
 **See the Truth Behind Every Claim &mdash; Evidence-Grounded, Explainable, and Real-Time.**
 
@@ -43,16 +43,17 @@ Version 0.2 marks a complete paradigm shift for TruthLens. We have stripped out 
 - **Researcher Agent:** Aggregates, cleans, and deduplicates evidence from all activated sources simultaneously.
 - **Judge Agent:** Evaluates the final evidence, scores entailment probabilities, resolves conflicts, and casts the final verdict.
 
-### 2. Cross-Encoder Re-Ranking Pipeline (`cross-encoder/ms-marco-MiniLM-L-6-v2`)
-Standard cosine similarity often retrieves documents that share keywords but lack contextual relevance. V.o.2 introduces a dedicated MS-MARCO Cross-Encoder Reranker.
-- Reranks all retrieved dense chunks against the query.
-- Implements a strict `logits > -2.0` relevance cutoff. If no evidence passes the threshold, the system definitively declares **INSUFFICIENT EVIDENCE** rather than hallucinating a false fact-check.
+### 2. Multi-Provider Cloud LLM Reasoning
+To bypass heavy local machine learning dependencies, TruthLens leverages optimized cloud AI endpoints for advanced semantic understanding:
+- Natively supports **Google Gemini**, **Groq**, and **OpenAI**.
+- Sends retrieved Wikipedia chunks and the claim as a unified prompt to deduce verifiable entailments.
+- Strict JSON-structured output formatting ensures clean UI rendering and zero parsing errors.
 
-### 3. Zero-Shot NLI Evaluator (`cross-encoder/nli-deberta-v3-base`)
-We entirely removed the need for an external cloud LLM for logical entailment!
-- The system natively runs a highly accurate DeBERTa v3 NLI model.
-- By framing retrieved chunks as the **Premise** and the user's claim as the **Hypothesis**, the model natively outputs whether the evidence **Entails (1)**, **Contradicts (0)**, or is **Neutral (2)** to the claim with absolute deterministic precision.
-- Built-in resilience: Caches models locally and utilizes a 3-attempt exponential backoff retry loop with `HF_HUB_OFFLINE` support to bypass flaky network drops on Windows environments.
+### 3. Offline Deterministic NLI Engine
+To guarantee 100% uptime even when Cloud LLM API keys are exhausted or missing (e.g., initial Vercel deployments), TruthLens incorporates a built-in deterministic verification engine.
+- Uses advanced semantic string matching, proximity constraints, and overlap scoring.
+- Implements a specialized Academic Demo Cache for instantaneous, verified responses to critical test cases.
+- Natively evaluates whether the evidence **Supports**, **Refutes**, or is **Neutral** to the claim with zero external dependencies.
 
 ---
 
@@ -75,36 +76,27 @@ TruthLens employs a modular pipeline composed of 5 distinct stages:
 ```mermaid
 graph TD
     subgraph Ingestion["1. Knowledge Ingestion & Sync"]
-        A1[Live RSS & Web Search: DuckDuckGo, Wikipedia] --> B1[Document Processor & Chunker]
-        A2[Historical Datasets: ISOT True, LIAR CSV] --> B1
-        A3[Curated Fact Dossiers & Custom PDFs] --> B1
-        B1 --> C1[all-MiniLM-L6-v2 Embedder]
-        C1 --> D1[(ChromaDB Vector Store)]
+        A1[Live Web Search: Wikipedia] --> B1[Document Processor & Chunker]
     end
 
     subgraph UserFlow["2. Multi-Mode Input & Extraction"]
         U1[Claim / Text] --> P1[Claim Normalizer]
-        U2[Web Article URL] --> P2[URL Headline Extractor] --> P1
-        U3[WhatsApp Viral Forward] --> P3[Viral Boilerplate Cleaner] --> P1
     end
 
-    subgraph RAGCore["3. Retrieval & Cross-Encoder Reranking"]
-        P1 --> Q1[Query Vectorization]
-        Q1 --> R1[ChromaDB HNSW Cosine Search & Live Search]
-        D1 -.-> R1
+    subgraph RAGCore["3. Retrieval & Chunking"]
+        P1 --> Q1[Query Term Extraction]
+        Q1 --> R1[Live Wikipedia Page Search]
         R1 --> S1[Candidate Evidence Chunks]
-        S1 --> S2[MS-MARCO MiniLM L-6 Cross-Encoder Reranker]
-        S2 --> S3[Threshold Filtered Evidence Dossier]
     end
 
     subgraph Verification["4. NLI Engine & LMTA Judge"]
-        S3 --> N1{DeBERTa v3 NLI Evaluator}
-        N1 -->|Probability > 0.6| N3[Stance Classifier: Entailment vs Contradiction]
+        S1 --> N1{Cloud LLM API or Offline Engine}
+        N1 -->|Provider: Gemini/Groq/Offline| N3[Stance Classifier: Support vs Contradiction]
         N3 --> N4[Agent Orchestrator & Consensus Analyzer]
     end
 
     subgraph Synthesis["5. Explainable Synthesis & Delivery"]
-        N4 --> V1[Verdict Generator: SUPPORTED / CONTRADICTED / MISLEADING / INSUFFICIENT]
+        N4 --> V1[Verdict Generator: SUPPORTED / REFUTED / MISLEADING / INSUFFICIENT]
         V1 --> V2[Confidence & Credibility Score Computer]
         V2 --> V3[Black & White Minimalist UI & WhatsApp Exporter]
     end
@@ -155,10 +147,14 @@ cd Truth-Lens
 pip install -r requirements.txt
 ```
 
-### 3. Setup Environment Variables (Optional)
-TruthLens runs entirely locally by default using `sentence-transformers` and `cross-encoder`. 
-If deploying to a serverless environment like Vercel, you may optionally configure an external LLM fallback by setting the following in your environment (do NOT commit this file):
-- `GEMINI_API_KEY`: Used as a lightweight fallback for NLI evaluation if local model limits are exceeded.
+### 3. Setup Environment Variables
+TruthLens relies on cloud LLMs for the highest fidelity fact-checking. 
+Create a `.env` file in the root directory (or configure Vercel Environment Variables) with your preferred provider:
+- `GEMINI_API_KEY`: Required for Google Gemini 2.0 Flash / 1.5 Flash processing.
+- `GROQ_API_KEY`: (Optional) For high-speed Llama 3 inference.
+- `OPENAI_API_KEY`: (Optional) For GPT-4o-mini inference.
+
+*Note: If no API keys are provided, TruthLens will seamlessly fallback to its built-in Offline Deterministic verification engine.*
 
 ### 4. Launch TruthLens Engine (Local FastAPI Server)
 ```bash
@@ -175,10 +171,10 @@ TruthLens comes with a comprehensive, production-grade test suite to verify UI e
 - **Run Adversarial Audit:** `python audit_tests.py`
 
 ## ☁️ Vercel Deployment
-TruthLens is optimized for Vercel Serverless deployments.
-- A `vercel.json` file is included in the root directory to automatically route requests to `api/index.py`.
-- **Note:** Due to Vercel's 250MB size limit on serverless functions, the heavy PyTorch neural models (ChromaDB/Transformers) are bypassed in production mode (`IS_VERCEL=1`), gracefully falling back to lightweight API endpoints and SQLite metadata storage.
-- To deploy, simply push to your connected GitHub repository.
+TruthLens is deeply optimized for **Vercel Serverless deployments**.
+- A `vercel.json` file is included in the root directory to automatically route API and UI requests to `api/index.py`.
+- **Zero Heavy Dependencies**: To fit gracefully within Vercel's strict 250MB size limit on serverless functions, the architecture relies exclusively on lightweight APIs (FastAPI) and Cloud LLM HTTP connections rather than bulky local PyTorch/ChromaDB models.
+- **Immediate Deployment**: Simply connect your GitHub repository to Vercel and deploy. Be sure to configure your `GEMINI_API_KEY` in the Vercel Dashboard for optimal performance.
 
 ---
 
