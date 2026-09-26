@@ -440,6 +440,7 @@
       const [toast, setToast] = useState(null);
       const [vaultTab, setVaultTab] = useState('news');
       const [newsSearchQuery, setNewsSearchQuery] = useState('');
+      const [isSyncingNews, setIsSyncingNews] = useState(false);
 
       const chartRef = useRef(null);
       const chartInstance = useRef(null);
@@ -459,7 +460,7 @@
 
       const loadHealth = async () => {
         try {
-          const res = await fetch('/api/health');
+          const res = await fetch(`/api/health?t=${Date.now()}`);
           const data = await res.json();
           setHealth(data);
         } catch (e) {
@@ -467,9 +468,23 @@
         }
       };
 
+      const handleManualSyncNews = async () => {
+        setIsSyncingNews(true);
+        try {
+          const res = await fetch('/api/news/sync', { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to sync live news.');
+          showToast('Live news synced successfully!', 'success');
+          await loadNewsStatus();
+        } catch (e) {
+          showToast(e.message, 'error');
+        } finally {
+          setIsSyncingNews(false);
+        }
+      };
+
       const loadDocuments = async () => {
         try {
-          const res = await fetch('/api/documents');
+          const res = await fetch(`/api/documents?t=${Date.now()}`);
           const data = await res.json();
           if (Array.isArray(data)) setDocuments(data);
         } catch (e) {
@@ -479,7 +494,7 @@
 
       const loadHistory = async () => {
         try {
-          const res = await fetch('/api/history?limit=50');
+          const res = await fetch(`/api/history?limit=50&t=${Date.now()}`);
           const data = await res.json();
           if (Array.isArray(data)) setHistory(data);
         } catch (e) {
@@ -489,7 +504,7 @@
 
       const loadAnalytics = async () => {
         try {
-          const res = await fetch('/api/analytics');
+          const res = await fetch(`/api/analytics?t=${Date.now()}`);
           const data = await res.json();
           setAnalytics(data);
         } catch (e) {
@@ -499,7 +514,7 @@
 
       const loadNewsStatus = async () => {
         try {
-          const res = await fetch('/api/news/status');
+          const res = await fetch(`/api/news/status?t=${Date.now()}`);
           const data = await res.json();
           setNewsStatus(data);
         } catch (e) {
@@ -539,11 +554,37 @@
 
           if (!res.ok) {
             const err = await res.json();
-            throw new Error(err.detail || 'Verification failed');
+            let errMsg = err.detail || 'Verification failed';
+            if (Array.isArray(errMsg)) {
+              errMsg = errMsg.map(e => e.msg).join(', ');
+            }
+            throw new Error(errMsg);
           }
 
           const data = await res.json();
           setCurrentResult(data);
+          
+          // Instant sync into audit history without waiting for network/cache
+          setHistory(prev => [data, ...prev]);
+
+          // Instant sync into analytics
+          setAnalytics(prev => {
+            if (!prev) return prev;
+            const v = data.verdict;
+            const total = prev.total_claims_verified || 0;
+            const curConf = prev.average_confidence || 0;
+            
+            return {
+              ...prev,
+              total_claims_verified: total + 1,
+              verdict_counts: {
+                ...prev.verdict_counts,
+                [v]: (prev.verdict_counts?.[v] || 0) + 1
+              },
+              average_confidence: ((curConf * total) + data.confidence_score) / (total + 1)
+            };
+          });
+
           loadHealth();
           loadHistory();
           loadAnalytics();
@@ -1168,13 +1209,20 @@
                         </h3>
                         <p className="text-xs text-zinc-400 mt-0.5">Real-time stories synced across Reuters, AP, BBC, and PolitiFact ready for instant verification.</p>
                       </div>
-                      <div className="relative">
+                      <div className="relative flex items-center gap-2">
+                        <button
+                          onClick={handleManualSyncNews}
+                          disabled={isSyncingNews}
+                          className="px-4 py-1.5 bg-white text-black hover:bg-zinc-200 disabled:opacity-50 text-xs font-semibold rounded-xl transition-colors shadow-sm"
+                        >
+                          {isSyncingNews ? 'Syncing...' : 'Sync Now'}
+                        </button>
                         <input
                           type="text"
                           placeholder="Filter news..."
                           value={newsSearchQuery}
                           onChange={(e) => setNewsSearchQuery(e.target.value)}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/40 font-mono w-48 sm:w-64"
+                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/40 font-mono w-40 sm:w-56"
                         />
                       </div>
                     </div>
@@ -1197,7 +1245,7 @@
                             return (item.title || '').toLowerCase().includes(q) || (item.source || '').toLowerCase().includes(q) || (item.category || '').toLowerCase().includes(q);
                           })).map((item, idx) => {
                             const title = item.title || item.headline || "News Story";
-                            const source = item.source || "Trusted Feed";
+                            const source = item.source_name || item.source || "Trusted Feed";
                             const cat = item.category || "GENERAL";
                             const date = (item.ingested_at || item.published_at || "Recent").slice(0, 10);
                             return (
@@ -1218,7 +1266,18 @@
                                 <td className="py-3.5 px-3 text-zinc-500 whitespace-nowrap">
                                   {date}
                                 </td>
-                                <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                                <td className="py-3.5 px-3 text-right whitespace-nowrap space-x-2">
+                                  {(item.url || item.link) && (
+                                    <a
+                                      href={item.url || item.link}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-block px-3 py-1 bg-white/10 text-zinc-300 hover:text-white hover:bg-white/20 text-xs font-semibold rounded-lg transition-colors shadow-sm border border-white/10"
+                                      title="Read Original Article"
+                                    >
+                                      Redirect ↗
+                                    </a>
+                                  )}
                                   <button
                                     onClick={() => handleVerifyNewsArticle(title)}
                                     className="px-3 py-1 bg-white text-black hover:bg-zinc-200 text-xs font-semibold rounded-lg transition-colors shadow-sm"

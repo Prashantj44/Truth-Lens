@@ -567,6 +567,24 @@
           // Instant sync into audit history without waiting for network/cache
           setHistory(prev => [data, ...prev]);
 
+          // Instant sync into analytics
+          setAnalytics(prev => {
+            if (!prev) return prev;
+            const v = data.verdict;
+            const total = prev.total_claims_verified || 0;
+            const curConf = prev.average_confidence || 0;
+            
+            return {
+              ...prev,
+              total_claims_verified: total + 1,
+              verdict_counts: {
+                ...prev.verdict_counts,
+                [v]: (prev.verdict_counts?.[v] || 0) + 1
+              },
+              average_confidence: ((curConf * total) + data.confidence_score) / (total + 1)
+            };
+          });
+
           loadHealth();
           loadHistory();
           loadAnalytics();
