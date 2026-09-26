@@ -440,6 +440,7 @@
       const [toast, setToast] = useState(null);
       const [vaultTab, setVaultTab] = useState('news');
       const [newsSearchQuery, setNewsSearchQuery] = useState('');
+      const [isSyncingNews, setIsSyncingNews] = useState(false);
 
       const chartRef = useRef(null);
       const chartInstance = useRef(null);
@@ -464,6 +465,20 @@
           setHealth(data);
         } catch (e) {
           console.error(e);
+        }
+      };
+
+      const handleManualSyncNews = async () => {
+        setIsSyncingNews(true);
+        try {
+          const res = await fetch('/api/news/sync', { method: 'POST' });
+          if (!res.ok) throw new Error('Failed to sync live news.');
+          showToast('Live news synced successfully!', 'success');
+          await loadNewsStatus();
+        } catch (e) {
+          showToast(e.message, 'error');
+        } finally {
+          setIsSyncingNews(false);
         }
       };
 
@@ -1172,13 +1187,20 @@
                         </h3>
                         <p className="text-xs text-zinc-400 mt-0.5">Real-time stories synced across Reuters, AP, BBC, and PolitiFact ready for instant verification.</p>
                       </div>
-                      <div className="relative">
+                      <div className="relative flex items-center gap-2">
+                        <button
+                          onClick={handleManualSyncNews}
+                          disabled={isSyncingNews}
+                          className="px-4 py-1.5 bg-white text-black hover:bg-zinc-200 disabled:opacity-50 text-xs font-semibold rounded-xl transition-colors shadow-sm"
+                        >
+                          {isSyncingNews ? 'Syncing...' : 'Sync Now'}
+                        </button>
                         <input
                           type="text"
                           placeholder="Filter news..."
                           value={newsSearchQuery}
                           onChange={(e) => setNewsSearchQuery(e.target.value)}
-                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/40 font-mono w-48 sm:w-64"
+                          className="bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/40 font-mono w-40 sm:w-56"
                         />
                       </div>
                     </div>
