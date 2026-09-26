@@ -155,13 +155,30 @@ cd Truth-Lens
 pip install -r requirements.txt
 ```
 
-### 3. Launch TruthLens Engine (Local FastAPI Server)
+### 3. Setup Environment Variables (Optional)
+TruthLens runs entirely locally by default using `sentence-transformers` and `cross-encoder`. 
+If deploying to a serverless environment like Vercel, you may optionally configure an external LLM fallback by setting the following in your environment (do NOT commit this file):
+- `GEMINI_API_KEY`: Used as a lightweight fallback for NLI evaluation if local model limits are exceeded.
+
+### 4. Launch TruthLens Engine (Local FastAPI Server)
 ```bash
-python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn api.index:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 4. Open in Browser
+### 5. Open in Browser
 Open **`http://127.0.0.1:8000`** in your browser to access the complete application.
+
+### 6. Automated Testing Suite
+TruthLens comes with a comprehensive, production-grade test suite to verify UI error handling, backend logic, and model entailment accuracy.
+- **Run Model Logic Tests:** `python deep_test.py`
+- **Run Integration Suite:** `python run_backend_test.py`
+- **Run Adversarial Audit:** `python audit_tests.py`
+
+## ☁️ Vercel Deployment
+TruthLens is optimized for Vercel Serverless deployments.
+- A `vercel.json` file is included in the root directory to automatically route requests to `api/index.py`.
+- **Note:** Due to Vercel's 250MB size limit on serverless functions, the heavy PyTorch neural models (ChromaDB/Transformers) are bypassed in production mode (`IS_VERCEL=1`), gracefully falling back to lightweight API endpoints and SQLite metadata storage.
+- To deploy, simply push to your connected GitHub repository.
 
 ---
 

@@ -449,6 +449,16 @@ class LLMService:
         # Calculate final verdict
         top_relevance = max([c.get("relevance_score", 0.0) for c in chunks]) if chunks else 0.0
 
+        def calc_confidence(chunk_list, base_score):
+            if not chunk_list: return base_score
+            avg_rel = sum(c.get("relevance_score", 50.0) for c in chunk_list) / len(chunk_list) / 100.0
+            avg_cred = sum(c.get("credibility_score", 50.0) for c in chunk_list) / len(chunk_list) / 100.0
+            
+            # Since offline NLI has no probability, use base_score + evidence strength
+            strength = (avg_rel * 4.0) + (avg_cred * 6.0)
+            boost = (len(chunk_list) - 1) * 2.0
+            return min(98.5, base_score + strength + boost)
+
         if not supporting_chunks and not contradicting_chunks:
             verdict = "INSUFFICIENT EVIDENCE"
             confidence = 35.0
@@ -456,17 +466,17 @@ class LLMService:
             key_reasoning = "Retrieved excerpts provide contextual information but lack direct confirmation or counter-evidence for the specific claim entities."
         elif len(contradicting_chunks) > 0 and len(supporting_chunks) == 0:
             verdict = "REFUTED"
-            confidence = min(98.0, 85.0 + (len(contradicting_chunks) * 4.0))
+            confidence = calc_confidence(contradicting_chunks, 75.0)
             explanation = "The claim is refuted by authoritative documentation in the knowledge vault. Retrieved evidence directly contradicts the factual assertion."
             key_reasoning = f"Identified {len(contradicting_chunks)} authoritative evidence chunk(s) detailing explicit counter-evidence and contradictory findings."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) == 0:
             verdict = "SUPPORTED"
-            confidence = min(98.0, 82.0 + (len(supporting_chunks) * 4.0))
+            confidence = calc_confidence(supporting_chunks, 72.0)
             explanation = "The claim is supported by credible evidence in the knowledge vault, with matching factual assertions and authoritative data points."
             key_reasoning = f"Corroborated by {len(supporting_chunks)} retrieved source chunk(s) confirming the entities, timing, and core factual premises."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) > 0:
             verdict = "MISLEADING"
-            confidence = 84.0
+            confidence = calc_confidence(supporting_chunks + contradicting_chunks, 65.0)
             explanation = "The claim is misleading or partially true. While portions of the statement are based on factual truths or specific contexts (e.g. purchasing power parity or future projections), it conflates metrics and omits critical qualifying facts (e.g. current nominal GDP rankings)."
             key_reasoning = f"Discovered both corroborating ({len(supporting_chunks)}) and contradicting ({len(contradicting_chunks)}) data points across trusted sources, indicating selective representation without necessary qualification."
         else:

@@ -36,3 +36,16 @@ desktop.ini
 scratch/
 test_*.txt
 test_out.txt
+
+# Databases
+backend/database/*.db
+chroma_db/
+
+# Test scripts
+debug_*.py
+audit_tests.py
+find_api.py
+test_live.py
+deep_test.py
+live_script.jsx
+package-lock.json

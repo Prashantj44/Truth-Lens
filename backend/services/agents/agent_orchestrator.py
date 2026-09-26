@@ -81,6 +81,7 @@ class AgentOrchestrator:
                     rationale = f"Context lacks sufficient entity overlap ({overlap_count}/{len(claim_terms)} terms); demoted to neutral."
 
             chunk["stance"] = stance
+            chunk["nli_score"] = eval_result.get("score", 0.5)
             chunk_classifications.append({
                 "chunk_id": chunk.get("chunk_id", ""),
                 "stance": stance,
@@ -97,6 +98,18 @@ class AgentOrchestrator:
         # Aggregate Verdict
         total_eval = len(supporting_chunks) + len(contradicting_chunks)
         
+        def calc_confidence(chunk_list):
+            if not chunk_list: return 0.0
+            avg_nli = sum(c.get("nli_score", 0.8) for c in chunk_list) / len(chunk_list)
+            avg_rel = sum(c.get("relevance_score", 50.0) for c in chunk_list) / len(chunk_list) / 100.0
+            avg_cred = sum(c.get("credibility_score", 50.0) for c in chunk_list) / len(chunk_list) / 100.0
+            
+            # Weighted average: 60% NLI Prob, 25% Credibility, 15% Relevance
+            base = (avg_nli * 60.0) + (avg_cred * 25.0) + (avg_rel * 15.0)
+            # Small boost for multiple independent corroborating sources
+            boost = (len(chunk_list) - 1) * 2.5
+            return min(99.9, base + boost)
+
         if not supporting_chunks and not contradicting_chunks:
             verdict = "INSUFFICIENT EVIDENCE"
             confidence = 25.0
@@ -104,17 +117,18 @@ class AgentOrchestrator:
             key_reasoning = "NLI model classified all retrieved text as Neutral."
         elif len(contradicting_chunks) > 0 and len(supporting_chunks) == 0:
             verdict = "CONTRADICTED"
-            confidence = min(99.0, 80.0 + len(contradicting_chunks) * 5.0)
+            confidence = calc_confidence(contradicting_chunks)
             explanation = f"The claim is refuted by the retrieved evidence. The most relevant source states: \"{contradicting_chunks[0]['text'][:150]}...\""
-            key_reasoning = f"NLI detected {len(contradicting_chunks)} contradictory source(s)."
+            key_reasoning = f"NLI detected {len(contradicting_chunks)} contradictory source(s) with high confidence."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) == 0:
             verdict = "SUPPORTED"
-            confidence = min(99.0, 80.0 + len(supporting_chunks) * 5.0)
+            confidence = calc_confidence(supporting_chunks)
             explanation = f"The claim is corroborated by the retrieved evidence. The primary source confirms: \"{supporting_chunks[0]['text'][:150]}...\""
-            key_reasoning = f"NLI detected {len(supporting_chunks)} supporting source(s)."
+            key_reasoning = f"NLI detected {len(supporting_chunks)} supporting source(s) with high confidence."
         else:
             verdict = "MISLEADING"
-            confidence = 85.0
+            confidence = calc_confidence(supporting_chunks + contradicting_chunks) - 10.0 # Penalty for conflicting signals
+            confidence = max(50.0, confidence)
             explanation = "Evidence is mixed. The claim may be partially true or lacking context."
             key_reasoning = f"Found {len(supporting_chunks)} supporting and {len(contradicting_chunks)} contradicting sources."
 

@@ -539,7 +539,11 @@
 
           if (!res.ok) {
             const err = await res.json();
-            throw new Error(err.detail || 'Verification failed');
+            let errMsg = err.detail || 'Verification failed';
+            if (Array.isArray(errMsg)) {
+              errMsg = errMsg.map(e => e.msg).join(', ');
+            }
+            throw new Error(errMsg);
           }
 
           const data = await res.json();
@@ -1197,7 +1201,7 @@
                             return (item.title || '').toLowerCase().includes(q) || (item.source || '').toLowerCase().includes(q) || (item.category || '').toLowerCase().includes(q);
                           })).map((item, idx) => {
                             const title = item.title || item.headline || "News Story";
-                            const source = item.source || "Trusted Feed";
+                            const source = item.source_name || item.source || "Trusted Feed";
                             const cat = item.category || "GENERAL";
                             const date = (item.ingested_at || item.published_at || "Recent").slice(0, 10);
                             return (
@@ -1218,7 +1222,18 @@
                                 <td className="py-3.5 px-3 text-zinc-500 whitespace-nowrap">
                                   {date}
                                 </td>
-                                <td className="py-3.5 px-3 text-right whitespace-nowrap">
+                                <td className="py-3.5 px-3 text-right whitespace-nowrap space-x-2">
+                                  {(item.url || item.link) && (
+                                    <a
+                                      href={item.url || item.link}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-block px-3 py-1 bg-white/10 text-zinc-300 hover:text-white hover:bg-white/20 text-xs font-semibold rounded-lg transition-colors shadow-sm border border-white/10"
+                                      title="Read Original Article"
+                                    >
+                                      Redirect ↗
+                                    </a>
+                                  )}
                                   <button
                                     onClick={() => handleVerifyNewsArticle(title)}
                                     className="px-3 py-1 bg-white text-black hover:bg-zinc-200 text-xs font-semibold rounded-lg transition-colors shadow-sm"
