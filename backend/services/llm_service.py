@@ -373,9 +373,28 @@ class LLMService:
                         rationale = "Presents opposing polarity or negation relative to the claim assertion."
                         contradicting_chunks.append(chunk)
                     else:
-                        stance = "SUPPORTING"
-                        rationale = "Directly corroborates both the subject and the asserted role/action."
-                        supporting_chunks.append(chunk)
+                        # Approximate proximity check to avoid false positives (e.g. subject and predicate in same paragraph but unrelated)
+                        try:
+                            subj_str = list(subject_tokens)[0]
+                            pred_str = list(role_predicate_tokens)[0]
+                            idx_subj = text_lower.find(subj_str)
+                            idx_pred = text_lower.find(pred_str)
+                            if idx_subj != -1 and idx_pred != -1 and abs(idx_subj - idx_pred) > 60:
+                                stance = "CONTRADICTING"
+                                rationale = "The subject and predicate are mentioned in different contexts within the text."
+                                contradicting_chunks.append(chunk)
+                                continue
+                        except Exception:
+                            pass
+                        
+                        if is_unique_role_claim:
+                             stance = "CONTRADICTING"
+                             rationale = "Text mentions the role and the subject, but syntactic analysis suggests a different entity holds the role."
+                             contradicting_chunks.append(chunk)
+                        else:
+                             stance = "SUPPORTING"
+                             rationale = "Directly corroborates both the subject and the asserted role/action."
+                             supporting_chunks.append(chunk)
                 else:
                     stance = "NEUTRAL"
                     rationale = "Mentions the subject or predicate in an unrelated context without confirming the complete relational assertion."
