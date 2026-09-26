@@ -388,9 +388,9 @@ class LLMService:
                                 continue
                         except Exception:
                             pass
-                             stance = "SUPPORTING"
-                             rationale = "Directly corroborates both the subject and the asserted role/action."
-                             supporting_chunks.append(chunk)
+                        stance = "SUPPORTING"
+                        rationale = "Directly corroborates both the subject and the asserted role/action."
+                        supporting_chunks.append(chunk)
                 else:
                     stance = "NEUTRAL"
                     rationale = "Mentions the subject or predicate in an unrelated context without confirming the complete relational assertion."
