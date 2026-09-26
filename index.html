@@ -460,7 +460,7 @@
 
       const loadHealth = async () => {
         try {
-          const res = await fetch('/api/health');
+          const res = await fetch(`/api/health?t=${Date.now()}`);
           const data = await res.json();
           setHealth(data);
         } catch (e) {
@@ -484,7 +484,7 @@
 
       const loadDocuments = async () => {
         try {
-          const res = await fetch('/api/documents');
+          const res = await fetch(`/api/documents?t=${Date.now()}`);
           const data = await res.json();
           if (Array.isArray(data)) setDocuments(data);
         } catch (e) {
@@ -494,7 +494,7 @@
 
       const loadHistory = async () => {
         try {
-          const res = await fetch('/api/history?limit=50');
+          const res = await fetch(`/api/history?limit=50&t=${Date.now()}`);
           const data = await res.json();
           if (Array.isArray(data)) setHistory(data);
         } catch (e) {
@@ -504,7 +504,7 @@
 
       const loadAnalytics = async () => {
         try {
-          const res = await fetch('/api/analytics');
+          const res = await fetch(`/api/analytics?t=${Date.now()}`);
           const data = await res.json();
           setAnalytics(data);
         } catch (e) {
@@ -514,7 +514,7 @@
 
       const loadNewsStatus = async () => {
         try {
-          const res = await fetch('/api/news/status');
+          const res = await fetch(`/api/news/status?t=${Date.now()}`);
           const data = await res.json();
           setNewsStatus(data);
         } catch (e) {
@@ -563,6 +563,10 @@
 
           const data = await res.json();
           setCurrentResult(data);
+          
+          // Instant sync into audit history without waiting for network/cache
+          setHistory(prev => [data, ...prev]);
+
           loadHealth();
           loadHistory();
           loadAnalytics();
