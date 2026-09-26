@@ -696,7 +696,7 @@
               datasets: [{
                 data: [
                   counts['SUPPORTED'] || 0,
-                  (counts['CONTRADICTED'] || counts['REFUTED'] || 0),
+                  (counts['CONTRADICTED'] || 0) + (counts['REFUTED'] || 0),
                   counts['MISLEADING'] || 0,
                   counts['INSUFFICIENT EVIDENCE'] || 0
                 ],

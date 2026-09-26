@@ -254,12 +254,14 @@ def get_analytics():
     cursor.execute("SELECT COUNT(*) as total FROM verification_history")
     total_claims = cursor.fetchone()["total"]
     
-    # Verdict counts
     verdicts = {"SUPPORTED": 0, "REFUTED": 0, "MISLEADING": 0, "INSUFFICIENT EVIDENCE": 0}
     cursor.execute("SELECT verdict, COUNT(*) as cnt FROM verification_history GROUP BY verdict")
     for r in cursor.fetchall():
-        if r["verdict"] in verdicts:
-            verdicts[r["verdict"]] = r["cnt"]
+        v = r["verdict"]
+        if v == "CONTRADICTED":
+            verdicts["REFUTED"] += r["cnt"]
+        elif v in verdicts:
+            verdicts[v] += r["cnt"]
             
     # Average confidence
     cursor.execute("SELECT AVG(confidence_score) as avg_conf, AVG(source_credibility_score) as avg_cred FROM verification_history")
