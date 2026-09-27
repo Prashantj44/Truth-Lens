@@ -40,12 +40,19 @@ The final Confidence Score (0-100%) is mathematically derived, rather than guess
 
 *Bonus Multiplier*: The system applies a minor confidence boost `(+2.5%)` for every independent, corroborating source found in the dataset, simulating journalistic consensus.
 
-## 6. Testing & Validation Metrics
+## 6. Advanced Temporal Verification Layer
+To resolve the widespread AI hallucination of conflating historical facts with current realities (e.g., verifying a former Prime Minister as the *current* Prime Minister), TruthLens implements an explicit temporal alignment protocol:
+*   **Timestamp Injection**: Live evidence chunks are dynamically tagged with `[Source Last Updated: <timestamp>]`.
+*   **Reference Time Prompts**: The LLM Judge is injected with the explicit server `CURRENT REFERENCE DATE AND TIME`.
+*   **Temporal Taxonomy**: Verdicts are strictly segmented by time: `SUPPORTED_CURRENT`, `SUPPORTED_HISTORICALLY`, `OUTDATED`, `CONTRADICTED`, `AMBIGUOUS_TIME_CONTEXT`, and `INSUFFICIENT_EVIDENCE`.
+*   **Regression Testing**: Includes a rigorous suite testing time-shifted claims against stale data to ensure 'OUTDATED' logic correctly overrides historical 'SUPPORTED' assumptions.
+
+## 7. Testing & Validation Metrics
 TruthLens has undergone strict adversarial auditing to ensure production stability:
 
 *   **API Edge Case Resilience**: 100% Pass Rate against empty payloads, excessively long strings (5000+ chars), malformed JSON, and invalid file uploads (handled via HTTP 422 Unprocessable Entity intercepts).
 *   **Integration Tests**: 100% Pass Rate across all 15 backend verification endpoints (Health, News Sync, History, Analytics, Verification).
 *   **Behavioral NLI Tests**: 100% Pass Rate in discriminating between explicitly *Supported* and *Contradicted* statements when evaluated against physical document text.
 
-## 7. Deployment Considerations
+## 8. Deployment Considerations
 TruthLens is deeply optimized for serverless environments (e.g., Vercel). By adhering to the strict 250MB lambda size limits, TruthLens bypasses heavy local PyTorch memory allocations. It utilizes a lightweight FastAPI architecture, routing inference to remote Cloud LLMs (via `GEMINI_API_KEY`) and falling back to its pure-Python deterministic NLI engine when external APIs are unavailable.

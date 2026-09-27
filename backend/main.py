@@ -95,6 +95,7 @@ async def get_favicon_png():
 # Serve Frontend Single-Page Application
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 FRONTEND_DIST = FRONTEND_DIR / "dist"
+ROOT_DIR = Path(__file__).resolve().parent.parent
 
 if FRONTEND_DIST.exists() and (FRONTEND_DIST / "index.html").exists():
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIST / "assets")), name="assets")
@@ -120,6 +121,20 @@ elif (FRONTEND_DIR / "index.html").exists():
         if file_path.exists() and file_path.is_file():
             return FileResponse(str(file_path))
         return FileResponse(str(FRONTEND_DIR / "index.html"))
+elif (ROOT_DIR / "index.html").exists():
+    # Serve the SPA from the project root (Docker / local dev without frontend/ directory)
+    @app.get("/")
+    async def serve_root_index():
+        return FileResponse(str(ROOT_DIR / "index.html"))
+
+    @app.get("/{full_path:path}")
+    async def serve_root_spa(full_path: str):
+        if full_path.startswith("api/") or full_path == "docs" or full_path == "openapi.json" or full_path == "health":
+            raise HTTPException(status_code=404, detail=f"API endpoint '/{full_path}' not found")
+        file_path = ROOT_DIR / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(ROOT_DIR / "index.html"))
 else:
     @app.get("/")
     def index():

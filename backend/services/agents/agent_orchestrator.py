@@ -111,7 +111,7 @@ class AgentOrchestrator:
             return min(99.9, base + boost)
 
         if not supporting_chunks and not contradicting_chunks:
-            verdict = "INSUFFICIENT EVIDENCE"
+            verdict = "INSUFFICIENT_EVIDENCE"
             confidence = 25.0
             explanation = "Could not find any concrete evidence supporting or refuting the claim."
             key_reasoning = "NLI model classified all retrieved text as Neutral."
@@ -121,15 +121,15 @@ class AgentOrchestrator:
             explanation = f"The claim is refuted by the retrieved evidence. The most relevant source states: \"{contradicting_chunks[0]['text'][:150]}...\""
             key_reasoning = f"NLI detected {len(contradicting_chunks)} contradictory source(s) with high confidence."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) == 0:
-            verdict = "SUPPORTED"
+            verdict = "SUPPORTED_CURRENT"
             confidence = calc_confidence(supporting_chunks)
             explanation = f"The claim is corroborated by the retrieved evidence. The primary source confirms: \"{supporting_chunks[0]['text'][:150]}...\""
             key_reasoning = f"NLI detected {len(supporting_chunks)} supporting source(s) with high confidence."
         else:
-            verdict = "MISLEADING"
+            verdict = "AMBIGUOUS_TIME_CONTEXT"
             confidence = calc_confidence(supporting_chunks + contradicting_chunks) - 10.0 # Penalty for conflicting signals
             confidence = max(50.0, confidence)
-            explanation = "Evidence is mixed. The claim may be partially true or lacking context."
+            explanation = "Evidence is mixed. The claim may be partially true, lacking context, or referencing different time periods."
             key_reasoning = f"Found {len(supporting_chunks)} supporting and {len(contradicting_chunks)} contradicting sources."
 
         return {
@@ -157,7 +157,7 @@ class AgentOrchestrator:
             
             if not chunks:
                 return {
-                    "verdict": "INSUFFICIENT EVIDENCE",
+                    "verdict": "INSUFFICIENT_EVIDENCE",
                     "confidence_score": 0,
                     "explanation": "No verified evidence was found for this claim.",
                     "key_reasoning": "Vector index returned 0 relevant chunks.",
@@ -185,7 +185,7 @@ class AgentOrchestrator:
                 supporting = chunks[:2]
                 
             return {
-                "verdict": llm_result.get("verdict", "INSUFFICIENT EVIDENCE"),
+                "verdict": llm_result.get("verdict", "INSUFFICIENT_EVIDENCE"),
                 "confidence_score": llm_result.get("confidence_score", 0),
                 "explanation": llm_result.get("explanation", ""),
                 "key_reasoning": llm_result.get("key_reasoning", ""),

@@ -1,0 +1,48 @@
+# ============================================================
+# TruthLens — Docker Compose
+# ============================================================
+# Single-service stack with named volumes for data persistence.
+# ChromaDB and SQLite survive container rebuilds.
+#
+# Usage:
+#   docker compose up --build        # Build & start
+#   docker compose down              # Stop
+#   docker compose logs -f           # Stream logs
+#   docker compose up --build -d     # Detached mode
+# ============================================================
+
+services:
+  truthlens:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: truthlens
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Ensure IS_VERCEL is NOT set inside Docker
+      - VERCEL=
+    volumes:
+      # Persist ChromaDB vector database across restarts
+      - truthlens-chroma-data:/app/chroma_db
+      # Persist SQLite database across restarts
+      - truthlens-sqlite-data:/app/backend/database
+      # Persist user uploads across restarts
+      - truthlens-uploads:/app/data/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; r=requests.get('http://localhost:8000/health'); exit(0 if r.status_code==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  truthlens-chroma-data:
+    name: truthlens-chroma-data
+  truthlens-sqlite-data:
+    name: truthlens-sqlite-data
+  truthlens-uploads:
+    name: truthlens-uploads

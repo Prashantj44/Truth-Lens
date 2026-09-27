@@ -87,6 +87,8 @@ class LiveSearchService:
                             with urllib.request.urlopen(req_sum, timeout=4) as s_resp:
                                 s_data = json.loads(s_resp.read().decode('utf-8'))
                                 extract = s_data.get('extract', '')
+                                timestamp = s_data.get('timestamp', '')
+                                date_str = f" [Source Last Updated: {timestamp}]" if timestamp else ""
                                 if extract and len(extract.strip()) > 30:
                                     chunk_id = f"live-wiki-{abs(hash(title)) % 100000}"
                                     page_url = f"https://en.wikipedia.org/wiki/{encoded_title}"
@@ -97,7 +99,7 @@ class LiveSearchService:
                                         "source": f"Wikipedia Global Encyclopedia ({title})",
                                         "source_type": "Encyclopedia / Official Reference",
                                         "page_number": 1,
-                                        "text": extract,
+                                        "text": extract + date_str,
                                         "credibility_score": 0.92,
                                         "url": page_url,
                                         "is_live_retrieved": True

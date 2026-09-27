@@ -27,10 +27,12 @@ The system integrates live Wikipedia search APIs and leverages state-of-the-art 
 
 | Verdict | Definition & Criteria |
 | :--- | :--- |
-| ✅ **SUPPORTED** | Authoritative evidence directly verifies and confirms the claim. |
+| ✅ **SUPPORTED_CURRENT** | Authoritative evidence directly verifies that the claim is true *at the current time*. |
+| 📜 **SUPPORTED_HISTORICALLY** | The claim was true in the past, but is no longer the current reality (e.g. past title/role). |
+| ⏳ **OUTDATED** | The claim asserts a present state, but evidence proves it is a past reality that has since changed. |
 | ❌ **CONTRADICTED** | Authoritative sources directly refute or disprove the factual assertions. |
-| ⚠️ **MISLEADING** | The claim is partially factual but omits critical context, exaggerates, or misrepresents facts. |
-| ❓ **INSUFFICIENT EVIDENCE** | No authoritative ground truth is found in evidence databases or real-time indexes. |
+| ⚠️ **AMBIGUOUS_TIME_CONTEXT** | The claim is partially factual but conflates timelines, omits critical context, or exaggerates metrics. |
+| ❓ **INSUFFICIENT_EVIDENCE** | No authoritative ground truth is found in evidence databases or real-time indexes. |
 
 ---
 
@@ -175,6 +177,44 @@ TruthLens is deeply optimized for **Vercel Serverless deployments**.
 - A `vercel.json` file is included in the root directory to automatically route API and UI requests to `api/index.py`.
 - **Zero Heavy Dependencies**: To fit gracefully within Vercel's strict 250MB size limit on serverless functions, the architecture relies exclusively on lightweight APIs (FastAPI) and Cloud LLM HTTP connections rather than bulky local PyTorch/ChromaDB models.
 - **Immediate Deployment**: Simply connect your GitHub repository to Vercel and deploy. Be sure to configure your `GEMINI_API_KEY` in the Vercel Dashboard for optimal performance.
+
+## 🐳 Docker Setup
+
+TruthLens also supports **local Docker deployment** for full-stack development and testing with ML models.
+
+### Prerequisites
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Linux containers enabled
+
+### Quick Start
+
+```powershell
+# 1. Create your environment file
+Copy-Item .env.example .env
+# Edit .env — add your GEMINI_API_KEY
+
+# 2. Build and start
+docker compose up --build
+
+# 3. Open in browser
+# http://localhost:8000
+```
+
+### Key Commands
+
+| Action | Command |
+|--------|---------|
+| Build & start | `docker compose up --build` |
+| Start detached | `docker compose up -d` |
+| Stop | `docker compose down` |
+| View logs | `docker compose logs -f` |
+| Rebuild clean | `docker compose build --no-cache` |
+| Reset all data | `docker compose down -v` |
+
+### Data Persistence
+
+ChromaDB, SQLite, and user uploads persist across container restarts via named Docker volumes (`truthlens-chroma-data`, `truthlens-sqlite-data`, `truthlens-uploads`).
+
+> **Full documentation:** See [`docs/DOCKER_SETUP.md`](docs/DOCKER_SETUP.md) for architecture details, environment variables, troubleshooting, and Vercel compatibility notes.
 
 ---
 

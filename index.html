@@ -692,15 +692,17 @@
           chartInstance.current = new Chart(ctx, {
             type: 'doughnut',
             data: {
-              labels: ['SUPPORTED', 'CONTRADICTED', 'MISLEADING', 'INSUFFICIENT'],
+              labels: ['SUP. CURRENT', 'SUP. HISTORICAL', 'OUTDATED', 'CONTRADICTED', 'MISLEADING', 'INSUFFICIENT'],
               datasets: [{
                 data: [
-                  counts['SUPPORTED'] || 0,
+                  (counts['SUPPORTED_CURRENT'] || 0) + (counts['SUPPORTED'] || 0),
+                  counts['SUPPORTED_HISTORICALLY'] || 0,
+                  counts['OUTDATED'] || 0,
                   (counts['CONTRADICTED'] || 0) + (counts['REFUTED'] || 0),
                   counts['MISLEADING'] || 0,
-                  counts['INSUFFICIENT EVIDENCE'] || 0
+                  (counts['INSUFFICIENT_EVIDENCE'] || 0) + (counts['INSUFFICIENT EVIDENCE'] || 0) + (counts['AMBIGUOUS_TIME_CONTEXT'] || 0)
                 ],
-                backgroundColor: ['#10B981', '#F43F5E', '#F59E0B', '#71717A'],
+                backgroundColor: ['#10B981', '#3B82F6', '#F97316', '#F43F5E', '#F59E0B', '#71717A'],
                 borderColor: '#030303',
                 borderWidth: 3
               }]
@@ -764,7 +766,7 @@
 
           {/* Clean Header */}
           <header className="relative z-10 sticky top-0 w-full border-b border-white/10 bg-black/75 backdrop-blur-xl">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[4rem] py-3 flex flex-wrap items-center justify-between gap-4">
               
               {/* Brand */}
               <div 
@@ -793,14 +795,14 @@
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 sm:px-4 sm:py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
                       activeTab === tab.id 
                         ? 'bg-white text-black font-semibold shadow-md' 
                         : 'text-zinc-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
                     <Icon name={tab.icon} className="w-3.5 h-3.5" />
-                    <span>{tab.label}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
                   </button>
                 ))}
               </nav>
@@ -988,37 +990,43 @@
                         </div>
 
                         {/* Big Verdict Badge */}
-                        <div className={`px-5 py-2.5 rounded-2xl font-mono font-black text-sm tracking-wider border flex items-center gap-2 ${
-                          currentResult.verdict === 'SUPPORTED' 
+                        <div className={`px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl font-mono font-black text-xs sm:text-sm tracking-wider border flex items-center gap-2 ${
+                          currentResult.verdict === 'SUPPORTED_CURRENT' || currentResult.verdict === 'SUPPORTED'
                             ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' 
+                            : currentResult.verdict === 'SUPPORTED_HISTORICALLY'
+                            ? 'bg-blue-500/20 text-blue-300 border-blue-500/50'
+                            : currentResult.verdict === 'OUTDATED'
+                            ? 'bg-orange-500/20 text-orange-300 border-orange-500/50'
                             : currentResult.verdict === 'CONTRADICTED' || currentResult.verdict === 'REFUTED'
                             ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
-                            : currentResult.verdict === 'MISLEADING'
+                            : currentResult.verdict === 'MISLEADING' || currentResult.verdict === 'AMBIGUOUS_TIME_CONTEXT'
                             ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
                             : 'bg-zinc-800 text-zinc-300 border-zinc-700'
                         }`}>
-                          <span className={`w-2 h-2 rounded-full ${
-                            currentResult.verdict === 'SUPPORTED' ? 'bg-emerald-400' :
+                          <span className={`w-2 h-2 shrink-0 rounded-full ${
+                            currentResult.verdict === 'SUPPORTED_CURRENT' || currentResult.verdict === 'SUPPORTED' ? 'bg-emerald-400' :
+                            currentResult.verdict === 'SUPPORTED_HISTORICALLY' ? 'bg-blue-400' :
+                            currentResult.verdict === 'OUTDATED' ? 'bg-orange-400' :
                             currentResult.verdict === 'CONTRADICTED' || currentResult.verdict === 'REFUTED' ? 'bg-rose-400' :
-                            currentResult.verdict === 'MISLEADING' ? 'bg-amber-400' : 'bg-zinc-400'
+                            currentResult.verdict === 'MISLEADING' || currentResult.verdict === 'AMBIGUOUS_TIME_CONTEXT' ? 'bg-amber-400' : 'bg-zinc-400'
                           }`} />
-                          <span>{currentResult.verdict}</span>
+                          <span className="break-words max-w-full text-center">{currentResult.verdict.replace(/_/g, ' ')}</span>
                         </div>
                       </div>
 
                       {/* Stat Metrics Grid */}
-                      <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10 font-mono text-center">
-                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-4 border-t border-white/10 font-mono text-center">
+                        <div className="p-3 sm:p-4 rounded-xl bg-white/[0.03] border border-white/10 flex flex-row sm:flex-col justify-between sm:justify-center items-center">
                           <div className="text-xs text-zinc-400">Confidence</div>
-                          <div className="text-2xl font-bold text-white mt-1">{currentResult.confidence_score}%</div>
+                          <div className="text-xl sm:text-2xl font-bold text-white mt-0 sm:mt-1">{currentResult.confidence_score}%</div>
                         </div>
-                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div className="p-3 sm:p-4 rounded-xl bg-white/[0.03] border border-white/10 flex flex-row sm:flex-col justify-between sm:justify-center items-center">
                           <div className="text-xs text-zinc-400">Source Credibility</div>
-                          <div className="text-2xl font-bold text-white mt-1">{currentResult.source_credibility_score || 95}%</div>
+                          <div className="text-xl sm:text-2xl font-bold text-white mt-0 sm:mt-1">{currentResult.source_credibility_score || 95}%</div>
                         </div>
-                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div className="p-3 sm:p-4 rounded-xl bg-white/[0.03] border border-white/10 flex flex-row sm:flex-col justify-between sm:justify-center items-center">
                           <div className="text-xs text-zinc-400">Agreement</div>
-                          <div className="text-2xl font-bold text-white mt-1">{currentResult.evidence_agreement_score || 100}%</div>
+                          <div className="text-xl sm:text-2xl font-bold text-white mt-0 sm:mt-1">{currentResult.evidence_agreement_score || 100}%</div>
                         </div>
                       </div>
 
@@ -1415,11 +1423,14 @@
                             </td>
                             <td className="py-3.5 px-3">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                h.verdict === 'SUPPORTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                                h.verdict === 'SUPPORTED_CURRENT' || h.verdict === 'SUPPORTED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                                h.verdict === 'SUPPORTED_HISTORICALLY' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
+                                h.verdict === 'OUTDATED' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
                                 h.verdict === 'CONTRADICTED' || h.verdict === 'REFUTED' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
+                                h.verdict === 'MISLEADING' || h.verdict === 'AMBIGUOUS_TIME_CONTEXT' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
                                 'bg-zinc-800 text-zinc-300 border-zinc-700'
                               }`}>
-                                {h.verdict}
+                                {h.verdict.replace(/_/g, ' ')}
                               </span>
                             </td>
                             <td className="py-3.5 px-3 font-bold text-white">
