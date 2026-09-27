@@ -13,10 +13,10 @@ class NLIEvaluator:
     def _load_model(self):
         if self._model is None:
             import time
-            from sentence_transformers.cross_encoder import CrossEncoder
             
             for attempt in range(3):
                 try:
+                    from sentence_transformers.cross_encoder import CrossEncoder
                     print(f"[NLIEvaluator] Loading NLI model (Attempt {attempt+1}/3)...")
                     try:
                         self._model = CrossEncoder('cross-encoder/nli-deberta-v3-base', local_files_only=True)
@@ -24,11 +24,14 @@ class NLIEvaluator:
                         self._model = CrossEncoder('cross-encoder/nli-deberta-v3-base')
                     print("[NLIEvaluator] NLI model loaded successfully.")
                     return
+                except ImportError:
+                    print("[NLIEvaluator] sentence_transformers not installed. Falling back.")
+                    break
                 except Exception as e:
                     print(f"[NLIEvaluator] Error loading NLI model: {e}")
                     time.sleep(1)
             
-            print("[NLIEvaluator] Failed to load NLI model after 3 attempts.")
+            print("[NLIEvaluator] Failed to load NLI model. Using fallback.")
             self._model = "fallback"
 
     def _normalize_claim(self, claim: str) -> str:

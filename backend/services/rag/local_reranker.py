@@ -13,10 +13,10 @@ class LocalReranker:
     def _load_model(self):
         if self._model is None:
             import time
-            from sentence_transformers.cross_encoder import CrossEncoder
             
             for attempt in range(3):
                 try:
+                    from sentence_transformers.cross_encoder import CrossEncoder
                     print(f"[LocalReranker] Loading Re-ranker (Attempt {attempt+1}/3)...")
                     try:
                         self._model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', local_files_only=True)
@@ -24,11 +24,14 @@ class LocalReranker:
                         self._model = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
                     print("[LocalReranker] Re-ranker loaded successfully.")
                     return
+                except ImportError:
+                    print("[LocalReranker] sentence_transformers not installed. Falling back.")
+                    break
                 except Exception as e:
                     print(f"[LocalReranker] Error loading re-ranker model: {e}")
                     time.sleep(1)
             
-            print("[LocalReranker] Failed to load Re-ranker after 3 attempts.")
+            print("[LocalReranker] Failed to load Re-ranker. Using fallback.")
             self._model = "fallback"
 
     def rerank(self, query: str, chunks: List[Dict[str, Any]], top_k: int = 5) -> List[Dict[str, Any]]:
