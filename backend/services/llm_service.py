@@ -21,12 +21,14 @@ CRITICAL INSTRUCTION FOR TEMPORAL REASONING:
 Distinguish historical truth from current truth. If a claim is about the *current* state (e.g., "The current Prime Minister is...", "Today, X is...", or simply "X is the CEO"), evidence that establishes this was true in the past DOES NOT support the claim for the present, unless the evidence itself is highly recent or implies ongoing status.
 If the claim is currently false but was historically true, it is OUTDATED or CONTRADICTED.
 If the claim is explicitly about the past (e.g., "In 2018, X was..."), evaluate it against historical evidence.
+CRITICAL INSTRUCTION FOR ENTITY MATCHING:
+The evidence MUST exactly match the PERSON, ROLE, and COUNTRY/ORGANIZATION mentioned in the claim. If a person's name matches but their role or country is different, return an ENTITY MISMATCH and mark as INSUFFICIENT_EVIDENCE or CONTRADICTED.
 
 Definitions:
 - SUPPORTED_CURRENT: The evidence confirms the claim is currently true at the reference date.
 - SUPPORTED_HISTORICALLY: The claim is about a past event/status, and evidence confirms it.
 - OUTDATED: The claim states something is currently true, but evidence shows it was only true in the past and has since changed.
-- CONTRADICTED: The evidence clearly contradicts the claim.
+- CONTRADICTED: The evidence clearly contradicts the claim (e.g., wrong person, wrong role, wrong country).
 - INSUFFICIENT_EVIDENCE: The available evidence is not enough to confidently verify the claim, or is too old to verify a current-status claim.
 - AMBIGUOUS_TIME_CONTEXT: The time context of the claim or evidence is too unclear to make a definitive judgment.
 
@@ -34,17 +36,22 @@ Return ONLY a valid JSON object matching this schema:
 {
   "verdict": "SUPPORTED_CURRENT" | "SUPPORTED_HISTORICALLY" | "OUTDATED" | "CONTRADICTED" | "INSUFFICIENT_EVIDENCE" | "AMBIGUOUS_TIME_CONTEXT",
   "confidence_score": <number between 0 and 100, lower it if evidence is stale or dates are missing>,
-  "explanation": "<clear 2-4 sentence explanation. For temporal cases, explicitly mention if evidence establishes past vs current status.>",
-  "key_reasoning": "<concise bullet points detailing the logic, evidence connection, and temporal alignment>",
+  "explanation": "<clear 2-4 sentence explanation. explicitly mention if evidence establishes past vs current status, and verify entity/country match.>",
+  "key_reasoning": "<concise bullet points detailing the logic, evidence connection, temporal alignment, and country/role match>",
+  "entity_match": "Match" | "Mismatch" | "Unverified",
+  "country_match": "Match" | "Mismatch" | "Not Applicable",
+  "role_match": "Match" | "Mismatch" | "Not Applicable",
+  "temporal_match": "Match" | "Mismatch" | "Unverified" | "Outdated",
   "chunk_classifications": [
     {
       "chunk_id": "<id>",
       "stance": "SUPPORTING" | "CONTRADICTING" | "NEUTRAL",
-      "rationale": "<brief explanation of how this chunk relates to the claim, noting temporal relevance>"
+      "rationale": "<brief explanation of how this chunk relates to the claim, noting temporal and entity relevance>"
     }
   ]
 }
 """
+
 
 class LLMService:
     def evaluate_claim(self, claim: str, evidence_text: str) -> Dict[str, Any]:
@@ -218,8 +225,13 @@ class LLMService:
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         prompt = f"CURRENT REFERENCE DATE AND TIME: {current_time}\n\nCLAIM TO VERIFY:\n\"{claim}\"\n\nRETRIEVED EVIDENCE CHUNKS:\n"
         for i, c in enumerate(chunks, 1):
-            prompt += f"\n--- Evidence Chunk {i} [ID: {c['chunk_id']}] (Source: {c['source']}, Page: {c.get('page_number', 1)}) ---\n"
-            prompt += f"{c['text']}\n"
+            prompt += f"\n--- Evidence Chunk {i} [ID: {c.get('chunk_id', 'unknown')}] ---\n"
+            prompt += f"Source: {c.get('source', 'Unknown')}\n"
+            if c.get("publication_date"):
+                prompt += f"Publication Date: {c['publication_date']}\n"
+            if c.get("retrieval_date"):
+                prompt += f"Retrieval Date: {c['retrieval_date']}\n"
+            prompt += f"Text:\n{c.get('text', '')}\n"
         prompt += "\nEvaluate whether the evidence strictly SUPPORTS (currently or historically), is OUTDATED, CONTRADICTS, offers INSUFFICIENT EVIDENCE, or has an AMBIGUOUS TIME CONTEXT."
         return prompt
 
@@ -257,6 +269,10 @@ class LLMService:
                 "confidence_score": round(confidence, 1),
                 "explanation": data.get("explanation", "Evidence verification complete."),
                 "key_reasoning": data.get("key_reasoning", ""),
+                "entity_match": data.get("entity_match", "Unverified"),
+                "country_match": data.get("country_match", "Not Applicable"),
+                "role_match": data.get("role_match", "Not Applicable"),
+                "temporal_match": data.get("temporal_match", "Unverified"),
                 "chunk_classifications": data.get("chunk_classifications", [])
             }
         except Exception as e:
@@ -457,7 +473,13 @@ class LLMService:
                     rationale = "Mentions the subject or predicate in an unrelated context without confirming the complete relational assertion."
                     neutral_chunks.append(chunk)
             
-            # Case 5: Non-relational general claims (e.g. "Renewable energy accounts for over 30%...")
+            # Case 4.5: Country or Entity mismatch in high-overlap text
+            elif is_unique_role_claim and overlap >= 0.30 and not predicate_matched:
+                stance = "CONTRADICTING"
+                rationale = "Text discusses the topic but role/entity facts conflict with the unique role asserted."
+                contradicting_chunks.append(chunk)
+
+            # Case 5: Non-relational general claims
             elif overlap >= 0.30:
                 if has_viral_claim and "virus" not in text_lower and "viral" not in text_lower and "cold" not in text_lower:
                     stance = "NEUTRAL"
@@ -527,10 +549,17 @@ class LLMService:
             explanation = "The claim is refuted by authoritative documentation in the knowledge vault. Retrieved evidence directly contradicts the factual assertion."
             key_reasoning = f"Identified {len(contradicting_chunks)} authoritative evidence chunk(s) detailing explicit counter-evidence and contradictory findings."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) == 0:
-            verdict = "SUPPORTED_CURRENT"
-            confidence = calc_confidence(supporting_chunks, 72.0)
-            explanation = "The claim is supported by credible evidence in the knowledge vault, with matching factual assertions and authoritative data points."
-            key_reasoning = f"Corroborated by {len(supporting_chunks)} retrieved source chunk(s) confirming the entities, timing, and core factual premises."
+            is_current = "current" in claim_lower or "today" in claim_lower or "now" in claim_lower
+            if is_current:
+                verdict = "AMBIGUOUS_TIME_CONTEXT"
+                confidence = calc_confidence(supporting_chunks, 60.0)
+                explanation = "The claim may have been historically true, but current evidence freshness cannot be offline-verified."
+                key_reasoning = "Offline NLP engine cannot independently verify real-time temporal freshness for current-status claims."
+            else:
+                verdict = "SUPPORTED_HISTORICALLY" if "was " in claim_lower or "in 20" in claim_lower else "SUPPORTED_CURRENT"
+                confidence = calc_confidence(supporting_chunks, 72.0)
+                explanation = "The claim is supported by credible evidence in the knowledge vault, with matching factual assertions and authoritative data points."
+                key_reasoning = f"Corroborated by {len(supporting_chunks)} retrieved source chunk(s) confirming the entities and core factual premises."
         elif len(supporting_chunks) > 0 and len(contradicting_chunks) > 0:
             verdict = "AMBIGUOUS_TIME_CONTEXT"
             confidence = calc_confidence(supporting_chunks + contradicting_chunks, 65.0)
@@ -547,6 +576,10 @@ class LLMService:
             "confidence_score": round(confidence, 1),
             "explanation": explanation,
             "key_reasoning": key_reasoning,
+            "entity_match": "Match" if subject_matched else ("Mismatch" if subject_completely_absent else "Unverified"),
+            "country_match": "Not Applicable",
+            "role_match": "Match" if predicate_matched else "Mismatch",
+            "temporal_match": "Unverified",
             "chunk_classifications": chunk_classifications
         }
 
@@ -626,6 +659,10 @@ class LLMService:
             "confidence_score": 15.0,
             "explanation": f"Unable to verify the claim '{claim}'. {reason}",
             "key_reasoning": "The knowledge base does not currently index documents covering this specific topic.",
+            "entity_match": "Unverified",
+            "country_match": "Not Applicable",
+            "role_match": "Not Applicable",
+            "temporal_match": "Unverified",
             "chunk_classifications": [],
             "llm_provider_used": "Offline Safeguard"
         }

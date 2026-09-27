@@ -61,6 +61,9 @@ class LiveSearchService:
         search_phrases = self.extract_search_phrases(claim)
         evidence_chunks: List[Dict[str, Any]] = []
         seen_titles = set()
+        
+        from datetime import datetime
+        current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # 1. Wikipedia Full-Text Search & Summary API
         for phrase in search_phrases:
@@ -102,6 +105,8 @@ class LiveSearchService:
                                         "text": extract + date_str,
                                         "credibility_score": 0.92,
                                         "url": page_url,
+                                        "publication_date": timestamp if timestamp else "",
+                                        "retrieval_date": current_time_str,
                                         "is_live_retrieved": True
                                     })
                                     if len(evidence_chunks) >= max_results:
@@ -131,6 +136,8 @@ class LiveSearchService:
                             "text": abstract,
                             "credibility_score": 0.88,
                             "url": ddg_data.get("AbstractURL", ""),
+                            "publication_date": "",
+                            "retrieval_date": current_time_str,
                             "is_live_retrieved": True
                         })
             except Exception:

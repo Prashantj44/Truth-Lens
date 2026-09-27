@@ -88,19 +88,25 @@ class VerificationService:
             
         avg_credibility = round((cred_sum / max(1, len(top_chunks))) * 100, 1)
         
-        total_eval = len(supporting) + len(contradicting)
-        if total_eval == 0:
-            agreement_score = 50.0
-            agreement_analysis = "Neutral context without direct consensus."
+        # Calculate Agreement based on independent sources, not chunk count
+        independent_supporting_sources = set(s.source for s in supporting)
+        independent_contradicting_sources = set(c.source for c in contradicting)
+        
+        total_eval_sources = len(independent_supporting_sources) + len(independent_contradicting_sources)
+        if total_eval_sources == 0:
+            agreement_score = 0.0
+            agreement_analysis = "No independent sources verify or refute the claim."
         else:
-            dominant = max(len(supporting), len(contradicting))
-            agreement_score = round((dominant / total_eval) * 100, 1)
-            if len(supporting) > 0 and len(contradicting) > 0:
-                agreement_analysis = "Source disagreement detected."
-            elif len(supporting) > 0:
-                agreement_analysis = "High source consensus corroborates the claim."
+            dominant = max(len(independent_supporting_sources), len(independent_contradicting_sources))
+            agreement_score = round((dominant / total_eval_sources) * 100, 1)
+            
+            if len(independent_supporting_sources) > 0 and len(independent_contradicting_sources) > 0:
+                agreement_analysis = f"Conflicting evidence: {len(independent_supporting_sources)} source(s) support, {len(independent_contradicting_sources)} contradict."
+            elif len(independent_supporting_sources) > 0:
+                agreement_analysis = f"Verified by {len(independent_supporting_sources)} independent source(s)."
             else:
-                agreement_analysis = "High source consensus refutes the claim."
+                agreement_analysis = f"Refuted by {len(independent_contradicting_sources)} independent source(s)."
+
 
         response_dict = {
             "id": v_id,
@@ -116,6 +122,10 @@ class VerificationService:
             "source_credibility_score": avg_credibility,
             "evidence_agreement_score": agreement_score,
             "agreement_analysis": agreement_analysis,
+            "entity_match": orchestrator_result.get("entity_match", "Unverified"),
+            "temporal_match": orchestrator_result.get("temporal_match", "Unverified"),
+            "country_match": orchestrator_result.get("country_match", "Not Applicable"),
+            "role_match": orchestrator_result.get("role_match", "Not Applicable"),
             "similar_claim_found": similar_claim_obj.model_dump() if similar_claim_obj else None,
             "llm_provider_used": orchestrator_result.get("llm_provider_used", "LMTA"),
             "timestamp": timestamp
@@ -137,6 +147,10 @@ class VerificationService:
             source_credibility_score=avg_credibility,
             evidence_agreement_score=agreement_score,
             agreement_analysis=agreement_analysis,
+            entity_match=response_dict["entity_match"],
+            temporal_match=response_dict["temporal_match"],
+            country_match=response_dict["country_match"],
+            role_match=response_dict["role_match"],
             similar_claim_found=similar_claim_obj,
             llm_provider_used=response_dict["llm_provider_used"],
             timestamp=timestamp

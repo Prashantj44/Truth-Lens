@@ -27,7 +27,7 @@ def test_full_pipeline():
     assert chunk_cnt > 0, "Vector DB should have indexed chunks"
 
     # Step 2: Test Claim 1: "India became the world's third-largest economy in 2025."
-    # Expectation: REFUTED or MISLEADING (it is 5th in nominal GDP, projected 3rd in 2027/2028)
+    # Expectation: CONTRADICTED or AMBIGUOUS_TIME_CONTEXT
     claim1 = "India became the world's third-largest economy in 2025."
     print(f"\n[Step 2] Testing Claim 1: \"{claim1}\"")
     req1 = ClaimVerificationRequest(claim=claim1)
@@ -38,10 +38,10 @@ def test_full_pipeline():
     print(f"-> Agreement Score: {res1.evidence_agreement_score}%")
     print(f"-> Explanation: {res1.explanation}")
     print(f"-> Supporting Chunks: {len(res1.supporting_evidence)}, Contradicting: {len(res1.contradicting_evidence)}")
-    assert res1.verdict in ["REFUTED", "MISLEADING"], f"Unexpected verdict {res1.verdict}"
+    assert res1.verdict in ["CONTRADICTED", "AMBIGUOUS_TIME_CONTEXT"], f"Unexpected verdict {res1.verdict}"
 
     # Step 3: Test Claim 2: "Global renewable electricity generation surpassed 30% in 2024."
-    # Expectation: SUPPORTED
+    # Expectation: SUPPORTED_CURRENT or SUPPORTED_HISTORICALLY
     claim2 = "Global renewable electricity generation surpassed 30% in 2024."
     print(f"\n[Step 3] Testing Claim 2: \"{claim2}\"")
     req2 = ClaimVerificationRequest(claim=claim2)
@@ -49,10 +49,10 @@ def test_full_pipeline():
     print(f"-> Verdict: {res2.verdict}")
     print(f"-> Confidence: {res2.confidence_score}%")
     print(f"-> Explanation: {res2.explanation}")
-    assert res2.verdict == "SUPPORTED", f"Unexpected verdict {res2.verdict}"
+    assert res2.verdict in ["SUPPORTED_CURRENT", "SUPPORTED_HISTORICALLY"], f"Unexpected verdict {res2.verdict}"
 
     # Step 4: Test Claim 3: "Antibiotics are effective in curing viral infections like the common cold."
-    # Expectation: REFUTED
+    # Expectation: CONTRADICTED
     claim3 = "Antibiotics are effective in curing viral infections like the common cold."
     print(f"\n[Step 4] Testing Claim 3: \"{claim3}\"")
     req3 = ClaimVerificationRequest(claim=claim3)
@@ -60,10 +60,10 @@ def test_full_pipeline():
     print(f"-> Verdict: {res3.verdict}")
     print(f"-> Confidence: {res3.confidence_score}%")
     print(f"-> Explanation: {res3.explanation}")
-    assert res3.verdict == "REFUTED", f"Unexpected verdict {res3.verdict}"
+    assert res3.verdict == "CONTRADICTED", f"Unexpected verdict {res3.verdict}"
 
     # Step 5: Test Claim 4: "Flying saucers landed in Atlantis in the year 1400."
-    # Expectation: INSUFFICIENT EVIDENCE
+    # Expectation: INSUFFICIENT_EVIDENCE
     claim4 = "Flying saucers landed in Atlantis in the year 1400."
     print(f"\n[Step 5] Testing Claim 4: \"{claim4}\"")
     req4 = ClaimVerificationRequest(claim=claim4)
@@ -71,7 +71,7 @@ def test_full_pipeline():
     print(f"-> Verdict: {res4.verdict}")
     print(f"-> Confidence: {res4.confidence_score}%")
     print(f"-> Explanation: {res4.explanation}")
-    assert res4.verdict == "INSUFFICIENT EVIDENCE", f"Unexpected verdict {res4.verdict}"
+    assert res4.verdict == "INSUFFICIENT_EVIDENCE", f"Unexpected verdict {res4.verdict}"
 
     # Step 6: Test Analytics
     print("\n[Step 6] Testing Analytics...")

@@ -54,7 +54,9 @@ class RetrievalService:
             "source": c["source"],
             "source_type": c.get("source_type", "General"),
             "page_number": int(c.get("page_number", 1)),
-            "url": c.get("url", "")
+            "url": c.get("url", ""),
+            "publication_date": c.get("publication_date", ""),
+            "retrieval_date": c.get("retrieval_date", "")
         } for c in chunks]
 
         # Try ChromaDB first
@@ -151,6 +153,8 @@ class RetrievalService:
                             "source_type": source_type,
                             "page_number": int(meta.get("page_number", 1)),
                             "url": meta.get("url", ""),
+                            "publication_date": meta.get("publication_date", ""),
+                            "retrieval_date": meta.get("retrieval_date", ""),
                             "credibility_score": cred_score,
                             "text": doc_text,
                             "relevance_score": round(similarity, 4)
@@ -179,6 +183,8 @@ class RetrievalService:
                 "source_type": source_type,
                 "page_number": int(meta.get("page_number", 1)),
                 "url": meta.get("url", ""),
+                "publication_date": meta.get("publication_date", ""),
+                "retrieval_date": meta.get("retrieval_date", ""),
                 "credibility_score": cred_score,
                 "text": item["text"],
                 "relevance_score": round(sim, 4)
@@ -210,6 +216,8 @@ class RetrievalService:
                         "source_type": source_type,
                         "page_number": 1,
                         "url": item.get("url", ""),
+                        "publication_date": item.get("published_at", ""),
+                        "retrieval_date": item.get("fetched_at", ""),
                         "credibility_score": cred_score,
                         "text": full_text,
                         "relevance_score": round(sim, 4)

@@ -53,95 +53,60 @@ class AgentOrchestrator:
 
     def _judge_evaluate(self, claim: str, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Judge Agent logic: Evaluates the gathered evidence using NLI.
+        Judge Agent logic: Evaluates the gathered evidence using LLM or robust Offline NLI.
+        Delegates to llm_service to handle deep temporal and entity verification.
         """
-        supporting_chunks = []
-        contradicting_chunks = []
-        neutral_chunks = []
-
-        chunk_classifications = []
-
-        # Extract core content terms from claim for entity grounding
-        stopwords = {'is', 'the', 'of', 'in', 'a', 'an', 'and', 'to', 'are', 'was', 'were', 'it', 'that', 'this', 'for', 'on', 'with', 'at', 'by', 'from', 'be', 'as', 'or', 'who', 'what', 'where', 'when', 'why', 'how'}
-        claim_terms = [w.lower().strip("?,.!'\"") for w in claim.split() if w.lower().strip("?,.!'\"") not in stopwords and len(w.strip("?,.!'\"")) > 2]
-
-        for chunk in chunks:
-            text = chunk.get("text", "")
-            eval_result = nli_evaluator.evaluate_stance(claim, text)
-            stance = eval_result["stance"]
-            rationale = eval_result["rationale"]
-
-            # Entity Grounding Safeguard: Ensure the chunk shares significant vocabulary with the claim
-            if stance in ["CONTRADICTING", "SUPPORTING"] and claim_terms:
-                chunk_lower = text.lower()
-                overlap_count = sum(1 for term in claim_terms if term in chunk_lower)
-                # Require at least 2 overlapping terms or 30% of the claim terms (prevents false matches on single common words)
-                if overlap_count < 2 and overlap_count < len(claim_terms) * 0.3:
-                    stance = "NEUTRAL"
-                    rationale = f"Context lacks sufficient entity overlap ({overlap_count}/{len(claim_terms)} terms); demoted to neutral."
-
-            chunk["stance"] = stance
-            chunk["nli_score"] = eval_result.get("score", 0.5)
-            chunk_classifications.append({
-                "chunk_id": chunk.get("chunk_id", ""),
-                "stance": stance,
-                "rationale": rationale
-            })
-
-            if stance == "SUPPORTING":
-                supporting_chunks.append(chunk)
-            elif stance == "CONTRADICTING":
-                contradicting_chunks.append(chunk)
-            else:
-                neutral_chunks.append(chunk)
-
-        # Aggregate Verdict
-        total_eval = len(supporting_chunks) + len(contradicting_chunks)
+        from backend.services.llm_service import llm_service
         
-        def calc_confidence(chunk_list):
-            if not chunk_list: return 0.0
-            avg_nli = sum(c.get("nli_score", 0.8) for c in chunk_list) / len(chunk_list)
-            avg_rel = sum(c.get("relevance_score", 50.0) for c in chunk_list) / len(chunk_list) / 100.0
-            avg_cred = sum(c.get("credibility_score", 50.0) for c in chunk_list) / len(chunk_list) / 100.0
-            
-            # Weighted average: 60% NLI Prob, 25% Credibility, 15% Relevance
-            base = (avg_nli * 60.0) + (avg_cred * 25.0) + (avg_rel * 15.0)
-            # Small boost for multiple independent corroborating sources
-            boost = (len(chunk_list) - 1) * 2.5
-            return min(99.9, base + boost)
+        # We pass the top chunks to the llm_service
+        if not chunks:
+            return {
+                "verdict": "INSUFFICIENT_EVIDENCE",
+                "confidence_score": 0.0,
+                "explanation": "No verified evidence was found for this claim.",
+                "key_reasoning": "Vector index returned 0 relevant chunks.",
+                "supporting_chunks": [], 
+                "contradicting_chunks": [], 
+                "neutral_chunks": [],
+                "top_chunks": [],
+                "entity_match": "Unverified",
+                "temporal_match": "Unverified",
+                "country_match": "Not Applicable",
+                "role_match": "Not Applicable",
+                "llm_provider_used": "LMTA Pipeline"
+            }
 
-        if not supporting_chunks and not contradicting_chunks:
-            verdict = "INSUFFICIENT_EVIDENCE"
-            confidence = 25.0
-            explanation = "Could not find any concrete evidence supporting or refuting the claim."
-            key_reasoning = "NLI model classified all retrieved text as Neutral."
-        elif len(contradicting_chunks) > 0 and len(supporting_chunks) == 0:
-            verdict = "CONTRADICTED"
-            confidence = calc_confidence(contradicting_chunks)
-            explanation = f"The claim is refuted by the retrieved evidence. The most relevant source states: \"{contradicting_chunks[0]['text'][:150]}...\""
-            key_reasoning = f"NLI detected {len(contradicting_chunks)} contradictory source(s) with high confidence."
-        elif len(supporting_chunks) > 0 and len(contradicting_chunks) == 0:
-            verdict = "SUPPORTED_CURRENT"
-            confidence = calc_confidence(supporting_chunks)
-            explanation = f"The claim is corroborated by the retrieved evidence. The primary source confirms: \"{supporting_chunks[0]['text'][:150]}...\""
-            key_reasoning = f"NLI detected {len(supporting_chunks)} supporting source(s) with high confidence."
-        else:
-            verdict = "AMBIGUOUS_TIME_CONTEXT"
-            confidence = calc_confidence(supporting_chunks + contradicting_chunks) - 10.0 # Penalty for conflicting signals
-            confidence = max(50.0, confidence)
-            explanation = "Evidence is mixed. The claim may be partially true, lacking context, or referencing different time periods."
-            key_reasoning = f"Found {len(supporting_chunks)} supporting and {len(contradicting_chunks)} contradicting sources."
-
+        llm_result = llm_service.verify_with_llm(claim, chunks)
+        
+        supporting = []
+        contradicting = []
+        neutral = []
+        for cls in llm_result.get("chunk_classifications", []):
+            matched_c = next((c for c in chunks if str(c.get("chunk_id")) == str(cls.get("chunk_id"))), None)
+            if matched_c:
+                matched_c["stance"] = cls.get("stance", "NEUTRAL")
+                matched_c["rationale"] = cls.get("rationale", "")
+                if cls.get("stance") == "SUPPORTING":
+                    supporting.append(matched_c)
+                elif cls.get("stance") == "CONTRADICTING":
+                    contradicting.append(matched_c)
+                else:
+                    neutral.append(matched_c)
+        
         return {
-            "verdict": verdict,
-            "confidence_score": round(confidence, 1),
-            "explanation": explanation,
-            "key_reasoning": key_reasoning,
-            "supporting_chunks": supporting_chunks,
-            "contradicting_chunks": contradicting_chunks,
-            "neutral_chunks": neutral_chunks,
-            "chunk_classifications": chunk_classifications,
-            "top_chunks": chunks
+            "verdict": llm_result.get("verdict", "INSUFFICIENT_EVIDENCE"),
+            "confidence_score": llm_result.get("confidence_score", 0.0),
+            "explanation": llm_result.get("explanation", ""),
+            "key_reasoning": llm_result.get("key_reasoning", ""),
+            "supporting_chunks": supporting,
+            "contradicting_chunks": contradicting,
+            "neutral_chunks": neutral,
+            "top_chunks": chunks,
+            "entity_match": llm_result.get("entity_match", "Unverified"),
+            "temporal_match": llm_result.get("temporal_match", "Unverified"),
+            "country_match": llm_result.get("country_match", "Not Applicable"),
+            "role_match": llm_result.get("role_match", "Not Applicable"),
+            "llm_provider_used": llm_result.get("llm_provider_used", "LMTA Local Pipeline")
         }
 
     def process_claim(self, claim: str, context_text: Optional[str] = None) -> Dict[str, Any]:
@@ -150,51 +115,9 @@ class AgentOrchestrator:
         """
         # --- VERCEL SERVERLESS FALLBACK ---
         if os.environ.get("VERCEL") == "1":
-            from backend.services.llm_service import llm_service
-            # In Vercel, route to cloud LLM APIs or built-in NLI engine
             instructions = self._router_analyze(claim)
             chunks = self._researcher_gather(claim, instructions)
-            
-            if not chunks:
-                return {
-                    "verdict": "INSUFFICIENT_EVIDENCE",
-                    "confidence_score": 0,
-                    "explanation": "No verified evidence was found for this claim.",
-                    "key_reasoning": "Vector index returned 0 relevant chunks.",
-                    "supporting_chunks": [], 
-                    "contradicting_chunks": [], 
-                    "neutral_chunks": [],
-                    "llm_provider_used": "Vercel API Fallback"
-                }
-                
-            llm_result = llm_service.verify_with_llm(claim, chunks)
-            
-            supporting = []
-            contradicting = []
-            neutral = []
-            for cls in llm_result.get("chunk_classifications", []):
-                matched_c = next((c for c in chunks if c.get("chunk_id") == cls.get("chunk_id")), None)
-                if matched_c:
-                    if cls.get("stance") == "SUPPORTING":
-                        supporting.append(matched_c)
-                    elif cls.get("stance") == "CONTRADICTING":
-                        contradicting.append(matched_c)
-                    else:
-                        neutral.append(matched_c)
-            if not supporting and not contradicting:
-                supporting = chunks[:2]
-                
-            return {
-                "verdict": llm_result.get("verdict", "INSUFFICIENT_EVIDENCE"),
-                "confidence_score": llm_result.get("confidence_score", 0),
-                "explanation": llm_result.get("explanation", ""),
-                "key_reasoning": llm_result.get("key_reasoning", ""),
-                "supporting_chunks": supporting,
-                "contradicting_chunks": contradicting,
-                "neutral_chunks": neutral,
-                "top_chunks": chunks,
-                "llm_provider_used": llm_result.get("llm_provider_used", "Cloud LLM (Vercel Production)")
-            }
+            return self._judge_evaluate(claim, chunks)
         # ----------------------------------
 
         instructions = self._router_analyze(claim)
@@ -230,7 +153,6 @@ class AgentOrchestrator:
         filtered_chunks = [c for c in top_chunks if c.get("relevance_score", -999.0) > -2.0]
 
         result = self._judge_evaluate(claim, filtered_chunks)
-        result["llm_provider_used"] = "Local NLI + LMTA Agentic Pipeline"
         return result
 
 agent_orchestrator = AgentOrchestrator()

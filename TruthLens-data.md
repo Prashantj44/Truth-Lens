@@ -38,14 +38,14 @@ The final Confidence Score (0-100%) is mathematically derived, rather than guess
 2.  **Source Credibility (25% Weight)**: A static trust multiplier assigned to the source publisher (e.g., *Wikipedia* = 0.92, *Government* = 0.95).
 3.  **Semantic Agreement (15% Weight)**: Measures the degree to which all retrieved chunks align to form a single consensus.
 
-*Bonus Multiplier*: The system applies a minor confidence boost `(+2.5%)` for every independent, corroborating source found in the dataset, simulating journalistic consensus.
+*Note*: The system explicitly recalculates agreement based only on **independent sources** (not total duplicated chunks) to prevent fake consensus amplification.
 
-## 6. Advanced Temporal Verification Layer
-To resolve the widespread AI hallucination of conflating historical facts with current realities (e.g., verifying a former Prime Minister as the *current* Prime Minister), TruthLens implements an explicit temporal alignment protocol:
-*   **Timestamp Injection**: Live evidence chunks are dynamically tagged with `[Source Last Updated: <timestamp>]`.
+## 6. Advanced Temporal & Entity Verification Layer
+To resolve the widespread AI hallucination of conflating historical facts with current realities (e.g., verifying a former Prime Minister as the *current* Prime Minister) and entity mismatches (e.g. wrong country), TruthLens implements an explicit temporal and entity alignment protocol:
+*   **Explicit Entity Matching**: The orchestrator forces a strict check on Country, Person, and Role alignments, ensuring that a match on a person's name does not accidentally validate the wrong title or region.
+*   **Timestamp Injection**: Live and local evidence chunks are strictly tagged with explicit `publication_date` and `retrieval_date` fields.
 *   **Reference Time Prompts**: The LLM Judge is injected with the explicit server `CURRENT REFERENCE DATE AND TIME`.
 *   **Temporal Taxonomy**: Verdicts are strictly segmented by time: `SUPPORTED_CURRENT`, `SUPPORTED_HISTORICALLY`, `OUTDATED`, `CONTRADICTED`, `AMBIGUOUS_TIME_CONTEXT`, and `INSUFFICIENT_EVIDENCE`.
-*   **Regression Testing**: Includes a rigorous suite testing time-shifted claims against stale data to ensure 'OUTDATED' logic correctly overrides historical 'SUPPORTED' assumptions.
 
 ## 7. Testing & Validation Metrics
 TruthLens has undergone strict adversarial auditing to ensure production stability:

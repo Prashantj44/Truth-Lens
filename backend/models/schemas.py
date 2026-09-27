@@ -12,6 +12,8 @@ class EvidenceChunk(BaseModel):
     relevance_score: float = 0.0
     stance: str = "NEUTRAL"  # SUPPORTING, CONTRADICTING, NEUTRAL
     credibility_score: float = 0.70
+    publication_date: Optional[str] = None
+    retrieval_date: Optional[str] = None
 
 class ClaimVerificationRequest(BaseModel):
     claim: str = Field(..., min_length=3, description="The claim or headline to verify")
@@ -44,6 +46,10 @@ class VerificationResponse(BaseModel):
     evidence_agreement_score: float = 0.0  # 0 to 100
     agreement_analysis: str = ""
     similar_claim_found: Optional[SimilarClaim] = None
+    entity_match: Optional[str] = None  # Match / Mismatch / Unverified
+    temporal_match: Optional[str] = None # Match / Mismatch / Unverified / Outdated
+    country_match: Optional[str] = None # Match / Mismatch / Not Applicable
+    role_match: Optional[str] = None # Match / Mismatch / Not Applicable
     llm_provider_used: str = "offline-nli"
     timestamp: str
 
