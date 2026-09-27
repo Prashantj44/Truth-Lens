@@ -1,28 +1,22 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
 from backend.models.schemas import (
     ClaimVerificationRequest,
     VerificationResponse,
-    EvidenceChunk,
     SimilarClaim
 )
 from backend.services.retrieval_service import retrieval_service
-from backend.services.reranking_service import reranking_service
-from backend.services.llm_service import llm_service
-from backend.services.live_search_service import live_search_service
+from backend.services.orchestration.verification_orchestrator import verification_orchestrator
 from backend.database.db import (
     save_verification,
     find_most_similar_claim
 )
-from backend.config import RETRIEVAL_TOP_K, RERANK_TOP_K
 
 class VerificationService:
     def verify(self, request: ClaimVerificationRequest) -> VerificationResponse:
         claim = request.claim.strip()
-        v_id = str(uuid.uuid4())
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Step 1: Check for similar previously verified claims
         similar_match = find_most_similar_claim(claim)
@@ -46,32 +40,29 @@ class VerificationService:
             except Exception as e:
                 print(f"[VerificationService] Auto-seed notice: {e}")
 
-        # Delegate entire RAG and NLP logic to the new Agent Orchestrator
-        from backend.services.agents.agent_orchestrator import agent_orchestrator
-        orchestrator_result = agent_orchestrator.process_claim(claim, request.context_text)
-
-        # Map back to models
-        supporting = [EvidenceChunk(**c) for c in orchestrator_result.get("supporting_chunks", [])]
-        contradicting = [EvidenceChunk(**c) for c in orchestrator_result.get("contradicting_chunks", [])]
-        neutral = [EvidenceChunk(**c) for c in orchestrator_result.get("neutral_chunks", [])]
+        # Step 3: Delegate to the Evidence-First Orchestrator
+        orchestrator_response = verification_orchestrator.process(request)
         
-        top_chunks = orchestrator_result.get("top_chunks", [])
-        
-        # Build retrieved sources
+        if similar_claim_obj:
+             orchestrator_response.similar_claim_found = similar_claim_obj
+             
+        # Step 4: Extract retrieved sources for UI grouping
         sources_dict: Dict[str, Dict[str, Any]] = {}
+        all_chunks = orchestrator_response.supporting_evidence + orchestrator_response.contradicting_evidence + orchestrator_response.neutral_evidence
+        
         cred_sum = 0.0
-        for c in top_chunks:
-            s_name = c.get("source", "Unknown")
-            p_num = c.get("page_number", 1)
-            cred_val = float(c.get("credibility_score", 0.70))
+        for c in all_chunks:
+            s_name = c.source or "Unknown"
+            p_num = c.page_number or 1
+            cred_val = float(c.credibility_score or 0.70)
             cred_sum += cred_val
             
             if s_name not in sources_dict:
                 sources_dict[s_name] = {
-                    "document_name": c.get("document_name", s_name),
+                    "document_name": c.document_name or s_name,
                     "source": s_name,
-                    "source_type": c.get("source_type", "General"),
-                    "url": c.get("url", ""),
+                    "source_type": c.source_type or "General",
+                    "url": c.url or "",
                     "credibility_score": round(cred_val * 100, 1),
                     "pages": [p_num]
                 }
@@ -79,81 +70,19 @@ class VerificationService:
                 sources_dict[s_name]["pages"].append(p_num)
             
             # If a source already existed but was missing URL, update it
-            if not sources_dict[s_name].get("url") and c.get("url"):
-                sources_dict[s_name]["url"] = c.get("url")
+            if not sources_dict[s_name].get("url") and c.url:
+                sources_dict[s_name]["url"] = c.url
 
         retrieved_sources_list = list(sources_dict.values())
         for s in retrieved_sources_list:
             s["pages"].sort()
             
-        avg_credibility = round((cred_sum / max(1, len(top_chunks))) * 100, 1)
-        
-        # Calculate Agreement based on independent sources, not chunk count
-        independent_supporting_sources = set(s.source for s in supporting)
-        independent_contradicting_sources = set(c.source for c in contradicting)
-        
-        total_eval_sources = len(independent_supporting_sources) + len(independent_contradicting_sources)
-        if total_eval_sources == 0:
-            agreement_score = 0.0
-            agreement_analysis = "No independent sources verify or refute the claim."
-        else:
-            dominant = max(len(independent_supporting_sources), len(independent_contradicting_sources))
-            agreement_score = round((dominant / total_eval_sources) * 100, 1)
-            
-            if len(independent_supporting_sources) > 0 and len(independent_contradicting_sources) > 0:
-                agreement_analysis = f"Conflicting evidence: {len(independent_supporting_sources)} source(s) support, {len(independent_contradicting_sources)} contradict."
-            elif len(independent_supporting_sources) > 0:
-                agreement_analysis = f"Verified by {len(independent_supporting_sources)} independent source(s)."
-            else:
-                agreement_analysis = f"Refuted by {len(independent_contradicting_sources)} independent source(s)."
+        orchestrator_response.retrieved_sources = retrieved_sources_list
+        orchestrator_response.source_credibility_score = round((cred_sum / max(1, len(all_chunks))) * 100, 1)
 
+        # Step 5: Save verification
+        save_verification(orchestrator_response.model_dump())
 
-        response_dict = {
-            "id": v_id,
-            "claim": claim,
-            "verdict": orchestrator_result.get("verdict", "INSUFFICIENT EVIDENCE"),
-            "confidence_score": orchestrator_result.get("confidence_score", 50.0),
-            "explanation": orchestrator_result.get("explanation", ""),
-            "key_reasoning": orchestrator_result.get("key_reasoning", ""),
-            "supporting_evidence": [s.model_dump() for s in supporting],
-            "contradicting_evidence": [c.model_dump() for c in contradicting],
-            "neutral_evidence": [n.model_dump() for n in neutral],
-            "retrieved_sources": retrieved_sources_list,
-            "source_credibility_score": avg_credibility,
-            "evidence_agreement_score": agreement_score,
-            "agreement_analysis": agreement_analysis,
-            "entity_match": orchestrator_result.get("entity_match", "Unverified"),
-            "temporal_match": orchestrator_result.get("temporal_match", "Unverified"),
-            "country_match": orchestrator_result.get("country_match", "Not Applicable"),
-            "role_match": orchestrator_result.get("role_match", "Not Applicable"),
-            "similar_claim_found": similar_claim_obj.model_dump() if similar_claim_obj else None,
-            "llm_provider_used": orchestrator_result.get("llm_provider_used", "LMTA"),
-            "timestamp": timestamp
-        }
-
-        save_verification(response_dict)
-
-        return VerificationResponse(
-            id=v_id,
-            claim=claim,
-            verdict=response_dict["verdict"],
-            confidence_score=response_dict["confidence_score"],
-            explanation=response_dict["explanation"],
-            key_reasoning=response_dict["key_reasoning"],
-            supporting_evidence=supporting,
-            contradicting_evidence=contradicting,
-            neutral_evidence=neutral,
-            retrieved_sources=retrieved_sources_list,
-            source_credibility_score=avg_credibility,
-            evidence_agreement_score=agreement_score,
-            agreement_analysis=agreement_analysis,
-            entity_match=response_dict["entity_match"],
-            temporal_match=response_dict["temporal_match"],
-            country_match=response_dict["country_match"],
-            role_match=response_dict["role_match"],
-            similar_claim_found=similar_claim_obj,
-            llm_provider_used=response_dict["llm_provider_used"],
-            timestamp=timestamp
-        )
+        return orchestrator_response
 
 verification_service = VerificationService()

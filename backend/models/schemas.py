@@ -2,18 +2,50 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
 class EvidenceChunk(BaseModel):
-    chunk_id: str
-    document_name: str
-    source: str
+    id: str = Field(default_factory=lambda: "")
+    chunk_id: str = Field(default_factory=lambda: "")
+    document_name: str = ""
+    source: str = ""
     source_type: str = "General"
     url: Optional[str] = None
     page_number: Optional[int] = 1
-    text: str
+    text: str = ""
+    text_excerpt: str = ""
     relevance_score: float = 0.0
-    stance: str = "NEUTRAL"  # SUPPORTING, CONTRADICTING, NEUTRAL
+    stance: str = "NEUTRAL"
     credibility_score: float = 0.70
     publication_date: Optional[str] = None
     retrieval_date: Optional[str] = None
+    updated_at: Optional[str] = None
+    authority: str = "Unverified"
+    primary_or_secondary: str = "Secondary"
+    publisher: Optional[str] = None
+    entity_match: Optional[str] = None
+    temporal_match: Optional[str] = None
+    claim_relation: Optional[str] = None
+    support_type: Optional[str] = None
+
+class StructuredClaim(BaseModel):
+    original_claim: str
+    subject: Optional[str] = None
+    predicate: Optional[str] = None
+    object_entity: Optional[str] = None
+    entities: List[str] = []
+    country: Optional[str] = None
+    organization: Optional[str] = None
+    role: Optional[str] = None
+    location: Optional[str] = None
+    time_expression: Optional[str] = None
+    claim_type: str = "AMBIGUOUS"
+    currentness_required: bool = False
+
+class VerificationRecommendation(BaseModel):
+    source_type: str
+    target_domain: str
+    queries: List[str] = []
+    what_to_check: str
+    what_confirms: str
+    what_refutes: str
 
 class ClaimVerificationRequest(BaseModel):
     claim: str = Field(..., min_length=3, description="The claim or headline to verify")
@@ -34,23 +66,31 @@ class SimilarClaim(BaseModel):
 class VerificationResponse(BaseModel):
     id: str
     claim: str
-    verdict: str  # SUPPORTED, REFUTED, MISLEADING, INSUFFICIENT EVIDENCE
-    confidence_score: float  # 0 to 100
+    claim_type: str = "AMBIGUOUS"
+    verdict: str  # VERIFIED, REFUTED, CONFLICTING EVIDENCE, INSUFFICIENT EVIDENCE, HISTORICAL SUPPORT ONLY, CURRENT STATUS UNVERIFIED, AMBIGUOUS
+    confidence_score: float  # 0 to 100 (if retained for compatibility)
+    verification_strength: str = "Insufficient" # Strong, Moderate, Weak, Insufficient
     explanation: str
+    reason: str = ""
     key_reasoning: str
+    entity_analysis: Dict[str, Any] = {}
+    temporal_analysis: Dict[str, Any] = {}
     supporting_evidence: List[EvidenceChunk] = []
     contradicting_evidence: List[EvidenceChunk] = []
     neutral_evidence: List[EvidenceChunk] = []
     retrieved_sources: List[Dict[str, Any]] = []
-    source_credibility_score: float = 0.0  # 0 to 100
-    evidence_agreement_score: float = 0.0  # 0 to 100
+    source_credibility_score: float = 0.0 
+    evidence_agreement_score: float = 0.0 
     agreement_analysis: str = ""
     similar_claim_found: Optional[SimilarClaim] = None
-    entity_match: Optional[str] = None  # Match / Mismatch / Unverified
-    temporal_match: Optional[str] = None # Match / Mismatch / Unverified / Outdated
-    country_match: Optional[str] = None # Match / Mismatch / Not Applicable
-    role_match: Optional[str] = None # Match / Mismatch / Not Applicable
-    llm_provider_used: str = "offline-nli"
+    verification_recommendation: Optional[VerificationRecommendation] = None
+    retrieved_at: Optional[str] = None
+    limitations: List[str] = []
+    entity_match: Optional[str] = None
+    temporal_match: Optional[str] = None
+    country_match: Optional[str] = None
+    role_match: Optional[str] = None
+    llm_provider_used: str = "orchestrator"
     timestamp: str
 
 class DocumentItem(BaseModel):
